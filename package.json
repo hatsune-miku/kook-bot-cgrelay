@@ -1,0 +1,33 @@
+{
+  "name": "kook-bot-cgrelay",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "ts-node src/server.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.21",
+    "@types/luxon": "^3.4.2",
+    "@types/pako": "^2.0.3",
+    "@types/ws": "^8.5.10",
+    "dotenv": "^16.4.5",
+    "eventsource": "^2.0.2",
+    "express": "^4.19.2",
+    "luxon": "^3.4.4",
+    "node-fetch": "2",
+    "openai": "^4.47.1",
+    "pako": "^2.1.0",
+    "radash": "^12.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2"
+  }
+}
