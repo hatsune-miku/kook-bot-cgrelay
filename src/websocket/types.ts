@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\websocket\types.ts
  * @Created At    : 2024-05-21 17:32:13
- * @Last Modified : 2024-05-22 15:06:46
+ * @Last Modified : 2024-05-22 19:33:41
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -17,7 +17,6 @@ export enum KWebSocketState {
     WAITING_FOR_HEARTBEAT_RESPONSE_1ST_RETRY = "WAITING_FOR_HEARTBEAT_RESPONSE_1ST_RETRY",
     WAITING_FOR_HEARTBEAT_RESPONSE_LAST_RETRY = "WAITING_FOR_HEARTBEAT_RESPONSE_LAST_RETRY",
     WAITING_FOR_RESUME_OK = "WAITING_FOR_RESUME_OK",
-    RETRY_WAITING = "RETRY_WAITING",
     IDLE = "IDLE",
 }
 

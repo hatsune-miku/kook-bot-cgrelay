@@ -8,46 +8,43 @@ import { die } from "../utils/server/die"
 import { chatCompletionWithoutStream } from "../chat/openai"
 import { ContextUnit } from "../chat/types"
 
-const HANDSHAKE_TIMEOUT_MILLIS = 6000
-const WAIT_PONGS_TIMEOUT_MILLIS = 6000
-const WAIT_RESUME_OK_TIMEOUT_MILLIS = 6000
-const HEARTBEAT_WAIT_TIMEOUT_MILLIS = 6000
-const REPING1_WAIT_DURATION_MILLIS = 2000
-const REPING2_WAIT_DURATION_MILLIS = 4000
-const HEARTBEAT_INTERVAL_MILLIS = 30000
-const RESUME_REQUEST1_DURATION_MILLIS = 8000
-const RESUME_REQUEST2_DURATION_MILLIS = 16000
+const HANDSHAKE_TIMEOUT = 6000
+const WAIT_PONGS_TIMEOUT = 6000
+const WAIT_RESUME_OK_TIMEOUT = 6000
+const HEARTBEAT_WAIT_TIMEOUT = 6000
+const REPING1_WAIT_DURATION = 2000
+const REPING2_WAIT_DURATION = 4000
+const HEARTBEAT_INTERVAL = 30000
+const RESUME_REQUEST1_DURATION = 8000
+const RESUME_REQUEST2_DURATION = 16000
+const INFINITE_RETRY_MAX_DURATION = 60000
+const OPEN_GATEWAY_1ST_RETRY_DURATION = 2000
+const OPEN_GATEWAY_LAST_RETRY_DURATION = 4000
+const OPEN_GATEWAY_WAIT_DURATION = 2000
+const WAIT_PONGS_1ST_RETRY_DURATION = 2000
+const INFINITE_RETRY_INITIAL_WAIT_DURATION = 1000
+const CONTEXT_LENGTH_LIMIT = 12
 
-let pingSenderInterval: NodeJS.Timeout | null = null
-let lastSn: number = 0
-let lastSessionId: string = ''
-const userIdToContext = new Map<string, ContextUnit[]>()
+let globalPingSenderInterval: NodeJS.Timeout | null = null
+let globalLastSn: number = 0
+let globalLastSessionId: string = ''
+const globalUserIdToContext = new Map<string, ContextUnit[]>()
 
 function getContext(userId: string): ContextUnit[] {
-    if (!userIdToContext.has(userId)) {
-        userIdToContext.set(userId, [])
+    if (!globalUserIdToContext.has(userId)) {
+        globalUserIdToContext.set(userId, [])
     }
-    return userIdToContext.get(userId)!
+    return globalUserIdToContext.get(userId)!
 }
 
 function appendToContext(userId: string, unit: ContextUnit) {
     const context = getContext(userId)
     context.push(unit)
-    if (context.length > 12) {
+    if (context.length > CONTEXT_LENGTH_LIMIT) {
         context.shift()
     }
 }
 
-/**
- * @returns 是否正处于指数回退的等待期？
- */
-function isWaitingForRetry(): boolean {
-    return shared.webSocketState === KWebSocketState.RETRY_WAITING
-}
-
-function setWaitingForRetry(): void {
-    setState(KWebSocketState.RETRY_WAITING)
-}
 
 /**
  * 更新状态，触发状态机
@@ -82,11 +79,11 @@ function sendKMessage<T>(message: KMessage<T>) {
 }
 
 function sendHeartbeatRequest() {
-    sendKMessage({ s: KMessageKind.Ping, sn: lastSn, d: {} })
+    sendKMessage({ s: KMessageKind.Ping, sn: globalLastSn, d: {} })
 }
 
 function sendResumeRequest() {
-    sendKMessage({ s: KMessageKind.Resume, sn: lastSn, d: {} })
+    sendKMessage({ s: KMessageKind.Resume, sn: globalLastSn, d: {} })
 }
 
 /**
@@ -114,15 +111,14 @@ async function handleOpenGateway({ isRetry, isLastRetry }: RetryProps) {
 
     // 第一次重试失败了，4s后重试下一次
     if (isRetry) {
-        setWaitingForRetry()
-        setState(KWebSocketState.OPENING_GATEWAY_LAST_RETRY, { afterMillis: 4000 })
+        setState(KWebSocketState.OPENING_GATEWAY_LAST_RETRY, { afterMillis: OPEN_GATEWAY_LAST_RETRY_DURATION })
         return
     }
 
     // 首次失败，2s后重试
-    setWaitingForRetry()
-    setState(KWebSocketState.OPENING_GATEWAY_1ST_RETRY, { afterMillis: 2000 })
+    setState(KWebSocketState.OPENING_GATEWAY_1ST_RETRY, { afterMillis: OPEN_GATEWAY_1ST_RETRY_DURATION })
 }
+
 
 async function handleOpenGatewayInfiniteRetry(duration: number) {
     info("Infinite reconnecting with duration=", duration)
@@ -132,12 +128,12 @@ async function handleOpenGatewayInfiniteRetry(duration: number) {
         const result = await Requests.openGateway({
             compress: true,
             fromDisconnect: true,
-            lastProcessedSn: lastSn,
-            lastSessionId: lastSessionId,
+            lastProcessedSn: globalLastSn,
+            lastSessionId: globalLastSessionId,
         })
         if (!result.success) {
             // 重连失败，按照指数回退重试
-            handleOpenGatewayInfiniteRetry(Math.min(duration * 2, 60000))
+            handleOpenGatewayInfiniteRetry(Math.min(duration * 2, INFINITE_RETRY_MAX_DURATION))
             return
         }
 
@@ -155,14 +151,13 @@ function handleWaitingForHandshake() {
     // XX秒后，如果还~在等待握手状态，则认为超时了
     setTimeout(() => {
         if (shared.webSocketState === KWebSocketState.WAITING_FOR_HANDSHAKE) {
-            setWaitingForRetry()
-            setState(KWebSocketState.OPENING_GATEWAY, { afterMillis: 2000 })
+            setState(KWebSocketState.OPENING_GATEWAY, { afterMillis: OPEN_GATEWAY_WAIT_DURATION })
         }
-    }, HANDSHAKE_TIMEOUT_MILLIS)
+    }, HANDSHAKE_TIMEOUT)
 }
 
 function handleConnected() {
-    if (pingSenderInterval) {
+    if (globalPingSenderInterval) {
         return
     }
 
@@ -174,13 +169,13 @@ function handleConnected() {
         }
         else {
             // 状态发生了变化的话，这个interval也就不运行了
-            if (pingSenderInterval) {
-                clearInterval(pingSenderInterval)
-                pingSenderInterval = null
+            if (globalPingSenderInterval) {
+                clearInterval(globalPingSenderInterval)
+                globalPingSenderInterval = null
             }
         }
     }
-    pingSenderInterval = setInterval(intervalTask, HEARTBEAT_INTERVAL_MILLIS)
+    globalPingSenderInterval = setInterval(intervalTask, HEARTBEAT_INTERVAL)
 
     // 先发一个
     intervalTask()
@@ -190,33 +185,30 @@ function handleWaitingForHeartbeatResponse() {
     // XX秒后，如果还~在等待Pong的状态，则认为超时了
     setTimeout(() => {
         if (shared.webSocketState === KWebSocketState.WAITING_FOR_HEARTBEAT_RESPONSE) {
-            setWaitingForRetry()
-            setState(KWebSocketState.WAITING_FOR_HEARTBEAT_RESPONSE_1ST_RETRY, { afterMillis: 2000 })
+            setState(KWebSocketState.WAITING_FOR_HEARTBEAT_RESPONSE_1ST_RETRY, { afterMillis: WAIT_PONGS_1ST_RETRY_DURATION })
         }
-    }, HEARTBEAT_WAIT_TIMEOUT_MILLIS)
+    }, HEARTBEAT_WAIT_TIMEOUT)
 }
 
 function handleWaitingForPong1stRetry() {
     // 先发两次心跳ping (2, 4)
-    setTimeout(sendHeartbeatRequest, REPING1_WAIT_DURATION_MILLIS)
-    setTimeout(sendHeartbeatRequest, REPING2_WAIT_DURATION_MILLIS)
+    setTimeout(sendHeartbeatRequest, REPING1_WAIT_DURATION)
+    setTimeout(sendHeartbeatRequest, REPING2_WAIT_DURATION)
 
     // 发过ping了，如果XX秒后，还~没收到Pong，则认为超时了，触发断线重连
     setTimeout(() => {
         if (shared.webSocketState === KWebSocketState.WAITING_FOR_HEARTBEAT_RESPONSE_1ST_RETRY) {
             // 如果不成功，回退到第2步，但尝试两次resume
-            setWaitingForRetry()
             setState(KWebSocketState.WAITING_FOR_HEARTBEAT_RESPONSE_LAST_RETRY)
         }
-    }, WAIT_PONGS_TIMEOUT_MILLIS + REPING1_WAIT_DURATION_MILLIS + REPING2_WAIT_DURATION_MILLIS)
+    }, WAIT_PONGS_TIMEOUT + REPING1_WAIT_DURATION + REPING2_WAIT_DURATION)
 }
 
 function handleWaitingForPongLastRetry() {
     // 尝试两次Resume (8, 16)
-    setTimeout(sendResumeRequest, RESUME_REQUEST1_DURATION_MILLIS)
-    setTimeout(sendResumeRequest, RESUME_REQUEST2_DURATION_MILLIS)
-    setWaitingForRetry()
-    setState(KWebSocketState.WAITING_FOR_RESUME_OK, { afterMillis: RESUME_REQUEST1_DURATION_MILLIS })
+    setTimeout(sendResumeRequest, RESUME_REQUEST1_DURATION)
+    setTimeout(sendResumeRequest, RESUME_REQUEST2_DURATION)
+    setState(KWebSocketState.WAITING_FOR_RESUME_OK, { afterMillis: RESUME_REQUEST1_DURATION })
 }
 
 function handleWaitingForResumeOk() {
@@ -226,7 +218,7 @@ function handleWaitingForResumeOk() {
         if (shared.webSocketState === KWebSocketState.WAITING_FOR_RESUME_OK) {
             setState(KWebSocketState.OPENING_GATEWAY_AFTER_DISCONNECT)
         }
-    }, WAIT_RESUME_OK_TIMEOUT_MILLIS)
+    }, WAIT_RESUME_OK_TIMEOUT)
 }
 
 /**
@@ -239,7 +231,7 @@ export async function handleStateUpdated() {
             break
 
         case KWebSocketState.OPENING_GATEWAY_AFTER_DISCONNECT:
-            handleOpenGatewayInfiniteRetry(1000)
+            handleOpenGatewayInfiniteRetry(INFINITE_RETRY_INITIAL_WAIT_DURATION)
             break
 
         case KWebSocketState.OPENING_GATEWAY_1ST_RETRY:
@@ -323,7 +315,7 @@ function handleReceivedEvent(sn: number | undefined, event: KEvent<unknown>) {
         error("Received a message without sn")
         return
     }
-    lastSn = sn
+    globalLastSn = sn
 
     if (event.type === KEventType.System) {
         handleReceivedSystemEvent(sn, event as KEvent<KSystemEventExtra>)
@@ -335,7 +327,7 @@ function handleReceivedEvent(sn: number | undefined, event: KEvent<unknown>) {
 
 function handleReceivedHandshakeResult(sessionId: string) {
     info("Server handshake success", "sessionId=", sessionId)
-    lastSessionId = sessionId
+    globalLastSessionId = sessionId
 
     if (shared.webSocketState === KWebSocketState.WAITING_FOR_HANDSHAKE) {
         setState(KWebSocketState.CONNECTED)
@@ -361,14 +353,14 @@ function handleReceivedPong() {
 function handleReceivedReconnect() {
     // 任何时候，收到reconnect包，应该将当前消息队列，sn等全部清空
     // 然后回到第一步，否则消息可能会错乱
-    lastSn = 0
-    lastSessionId = ''
+    globalLastSn = 0
+    globalLastSessionId = ''
     setState(KWebSocketState.OPENING_GATEWAY)
 }
 
 function handleReceivedResumeAck(sessionId: string) {
     info("Server acked resume")
-    lastSessionId = sessionId
+    globalLastSessionId = sessionId
     if (shared.webSocketState === KWebSocketState.WAITING_FOR_RESUME_OK) {
         setState(KWebSocketState.CONNECTED)
     }
