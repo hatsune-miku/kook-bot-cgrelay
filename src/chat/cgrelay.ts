@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\cgrelay.ts
  * @Created At    : 2024-05-22 17:01:43
- * @Last Modified : 2024-05-22 18:00:07
+ * @Last Modified : 2024-05-24 19:26:16
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -10,7 +10,7 @@ import fetch from "node-fetch"
 
 const EventSourceAlt = require('eventsource')
 
-const AuthString = "Bearer DHdvnQwGA0Gti3SI70OHr7+EBXmzpdjQm+8MMheGCVMKCX3tQP0utmAuXeovv/XQnHyPTP1mD466WwHdo0FmPtGhe9bqDG+t4VyVU/1xyM46Guo7BZorCNm+WS2781aTAaYmbkG+jTohwRzrOS54PkvlcRPpAGR/bL+CeIy8uEy/Rc/JQTlRfFC1SiqbsUdkrEpKPhe8yS1C/aEGlhOFDQ1Y4pRCvKcXj4sq5xrzMfNpqIxF3x4DqPa/gJlQbB1HadSTt9qk0qoa7BElcQjxDbwFx0dbkbh4XtFnKUwE8vv9geCdfQ3aWU1OyqmTIij7HJP8eXBYgBl5m3/WY9vk8QU6wXpH6i1QiRUtfy00251/gWgtlQXPKH1xsfTU1o1DM6DEoRjIYe5CM4Hk/APw1sH0nNjr2xZ+lsZO6tIJo0vC6OfqB3YiH6yvQsKZooHeDnGNY7h9jo2LYBov1VGpre9YlzfB8OuJQfBOJD9kLNe3f23/3KkN+mc5C4dadtFjBubDkCOKX7iBQAdOtVtO4nkCUanB2aA6XHCa9+V3gE33BBlZzOw0DpfOjfDWm3d8O6I69U2kGtsiB7imVoYYY4VZ3fwygWgaW8rUhUtN2qWChl6wjYqDMLmTn2e2NX+gTwAZdcvnRtARIbbq7KjstNgaJow7czGQBePZJLDY2rxcNuwpRnBSI6x6znL3MGfwDljUX7oKihNBgSALNB4fYr2ulbxRpRQnM1tjHdKNiklDuCLYXOiQ93/wtGrmc7/I2YpuRKySDRxj+z5ygDR1QdSAPzXdHaStt69SUA2JGR3zP8UAe4LCD3uz7enqe1lToS/vJRyZDVf5JZ/UkG6KboLJjlhqw8jAdAq6Si/b13fWMLNcRBceEICxpqxmL9dht3e1SFIZJNzDZkAgMMMIU2NnBVbE9OiS/JiIVwsSG1vBJWPlQwML+466VmKSAnkL4J3iYQ6/cuT809NuKaZKAb0QtvzoYoncXYdplt62w+Lg9WEacqbi9Eg1e6JmobJR5iEwMUYH1zeogwmUmkunN7TdhPK2Rxxp/CPjw6Irzlf2cciT4x/Ks1GnS9W8oZjK7Fxr7n5LuNUvxppqgzknevCtEk+lNl6GD+t7FAxpM7PFPRB8MkxYW0wkn/4+QojHrctHGQf0xLRE5BqlMuayFg=="
+const AuthString = "Bearer DHdvnQwGA0Gti3SI70OHr7+EBXmzpdjQm+8MMheGCVMKCX3tQP0utmAuXeovv/XQnHyPTP1mD466WwHdo0FmPtGhe9bqDG+t4VyVU/1xyM46Guo7BZorCNm+WS2781aT5ATdUiKbDGbt2oRvBu2BGTNCyQDL+VVT9W+06s9lO2bLOgtVcNPfPEuvY5recu+jEaO+dUrt3rr+8eQTRR+2RmFTsjLXuf7X6Fs40oga8RkrzfYWdAUztKwPQ2b+XbleJCBUG/78MDawFmx0UxdWnPrtorj9/j/1z54qIdbn2nXZnT61BYZKOlTIRN3y/uf116R/PsEUrb65gxJmDkWV6Lh4IBfOxXS6eVvC7V2DFnT65rQFSQus/ym+PU7kVzBTBeas0+IQqY+wBgIpZ0zEF7QZXKdbu8MfRAlI+JQLKRnorI6B+LNEOq+oaRyT24BjMjMj4DOkqEPVXex6JJHCxl3bz+7+/bWZxlrHVMarwlt/XNKfaB4OEhQUQC5EPouLdB8icP1J0aU6CszVNksIXs2ZpVXZu/qNKZ/AcdgVbEGXY7icI6dpU1a/EUTt1x/68i+ahyYbJEX19GjAXnux9o0C0sbFaK0ZHyJ8kgJfF/waGk1OrmGJ80c9c3E5euvtQDATMo8Fv2h6r/TTT99KkopKchYGUMYQtjOQC8tPRwNz/bYY+rjIp1ciyblTqklVRGJfvM3fTM1e0/BAQs0rfze2gVccCPPWAxVH/s8WCOEH4m2YwPmTG9U95xAbqvCbJTsqoJs4wVECu7L+Mkl4MCI6lwCTA1wYzQzWG2J2lg6aAt0g2CqWM1moGK2xhtR3CjFD5u7nn5f/lhK+YA9DDxesIs/i+myEJbebSDfpfYYswu/13GnBXjVf9XFyPZc0bG7zO9xlt66SiGFm98xeJe+QZGcqxoXW11tfiVLNxdU4zvI1GrqXnWAAE1BLSb9w1A8qdeLn1hH/+VIw/5Tv1/3a98sMFJMY1H3DHcFpqzj+TTZqNKWqi7rPlUiUhFUhKVRToIFp2/7DC/x6m8nYN1VQoKec/DMFVbEVu+eMZ0t91NYty6AKJafB8G5q28oPzTtGrSmkh2cq8610UI0XBd7S7PR7oNaAjXEMzeuIK6HN8lgpN/MD8z41qf8PT61CQPiLbZYPGxzEOWSJZa+MFQ=="
 
 export async function chatCompletionWithoutStream(prompt: string): Promise<string> {
     const messages = [

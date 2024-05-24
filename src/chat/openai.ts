@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\openai.ts
  * @Created At    : 2024-05-22 17:45:24
- * @Last Modified : 2024-05-22 18:59:52
+ * @Last Modified : 2024-05-24 19:20:46
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -22,6 +22,8 @@ export async function chatCompletionWithoutStream(
     context: ContextUnit[],
     prompt: string
 ): Promise<string> {
+    return `openai echo nickname=${nickname} prompt=${prompt}`
+
     const openai = new OpenAI({
         apiKey: draw(Env.OPENAI_API_KEYS)!
     })

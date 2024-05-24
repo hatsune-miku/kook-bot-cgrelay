@@ -5,8 +5,8 @@ import { KEvent, KEventType, KHandshakeMessage, KMessage, KMessageKind, KResumeA
 import { decompressKMessage } from "../utils/deflate/deflate"
 import { Requests } from "../utils/krequest/request"
 import { die } from "../utils/server/die"
-import { chatCompletionWithoutStream } from "../chat/openai"
 import { ContextUnit } from "../chat/types"
+import { chatCompletionWithoutStream } from "../chat/cgrelay"
 
 const HANDSHAKE_TIMEOUT = 6000
 const WAIT_PONGS_TIMEOUT = 6000
@@ -280,13 +280,13 @@ async function handleReceivedTextChannelEvent(sn: number, messageEvent: KEvent<K
             await Requests.createChannelMessage({
                 type: KEventType.KMarkdown,
                 target_id: messageEvent.target_id,
-                content: "稍等，正在生成回复...",
+                content: "稍等，CGRelay 正在生成回复...",
                 quote: messageId,
             })
 
             const nickname = messageEvent.extra.author.nickname
             const context = getContext(messageEvent.author_id)
-            const openAIResponse = await chatCompletionWithoutStream(nickname, context, prompt)
+            const openAIResponse = await chatCompletionWithoutStream(prompt) // , context, prompt
             info("OpenAI response:", openAIResponse)
 
             const result = await Requests.createChannelMessage({
