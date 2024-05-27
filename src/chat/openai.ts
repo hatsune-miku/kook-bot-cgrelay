@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\openai.ts
  * @Created At    : 2024-05-22 17:45:24
- * @Last Modified : 2024-05-27 15:46:38
+ * @Last Modified : 2024-05-27 16:15:50
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -37,7 +37,7 @@ export async function chatCompletionWithoutStream(
 
     const completion = await openai.chat.completions.create({
         messages: messages,
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o',
     })
 
     return completion.choices[0].message.content ?? "<no content>"
