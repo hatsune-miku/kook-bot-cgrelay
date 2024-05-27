@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\openai.ts
  * @Created At    : 2024-05-22 17:45:24
- * @Last Modified : 2024-05-24 19:20:46
+ * @Last Modified : 2024-05-27 15:23:29
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -19,11 +19,8 @@ if (Env.OPENAI_API_KEYS.length === 0) {
 
 export async function chatCompletionWithoutStream(
     nickname: string,
-    context: ContextUnit[],
-    prompt: string
+    context: ContextUnit[]
 ): Promise<string> {
-    return `openai echo nickname=${nickname} prompt=${prompt}`
-
     const openai = new OpenAI({
         apiKey: draw(Env.OPENAI_API_KEYS)!
     })
@@ -32,7 +29,6 @@ export async function chatCompletionWithoutStream(
         { role: 'system', content: '你是ChatGPT，目前作为某即时通讯平台的一个Bot，为任何向你提问的用户提供简短的解答。' },
         { role: 'system', content: `与你对话的用户网名是:${nickname}` },
         ...context,
-        { role: 'user', content: prompt }
     ]
 
     if (messages.length > 12) {

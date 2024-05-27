@@ -1,12 +1,12 @@
 /*
- * @Path          : \kook-bot-cgrelay\src\websocket\types.ts
+ * @Path          : \kook-bot-cgrelay\src\websocket\kwebsocket\types.ts
  * @Created At    : 2024-05-21 17:32:13
- * @Last Modified : 2024-05-22 19:33:41
+ * @Last Modified : 2024-05-27 11:48:04
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
 
-export enum KWebSocketState {
+export enum KWSState {
     OPENING_GATEWAY = "OPENING_GATEWAY",
     OPENING_GATEWAY_1ST_RETRY = "OPENING_GATEWAY_1ST_RETRY",
     OPENING_GATEWAY_LAST_RETRY = "OPENING_GATEWAY_LAST_RETRY",

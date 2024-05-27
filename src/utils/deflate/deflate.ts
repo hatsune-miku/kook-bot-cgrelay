@@ -7,7 +7,7 @@
  */
 
 import Pako from "pako"
-import { KMessage } from "../../websocket/types"
+import { KMessage } from "../../websocket/kwebsocket/types"
 
 /**
  * @throws

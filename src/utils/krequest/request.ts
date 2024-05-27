@@ -1,15 +1,14 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\utils\krequest\request.ts
  * @Created At    : 2024-05-21 16:22:37
- * @Last Modified : 2024-05-24 19:17:38
+ * @Last Modified : 2024-05-27 15:20:11
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
 
 import { error } from "../logging/logger"
-import { CreateChannelMessageProps, KGatewayResult, KResponse, KResponseExt } from "./types"
-import { shared } from "../../global/shared"
-import { KEventType, OpenGatewayProps } from "../../websocket/types"
+import { CreateChannelMessageProps, CreateChannelMessageResult, EditChannelMessageProps, KGatewayResult, KResponse, KResponseExt, WhoAmIResult } from "./types"
+import { KEventType, OpenGatewayProps } from "../../websocket/kwebsocket/types"
 import { Env } from "../env/env"
 
 export const BASE_URL = 'https://www.kookapp.cn'
@@ -68,7 +67,6 @@ export class Requests {
      * @returns 
      */
     static async openGateway(props: OpenGatewayProps): Promise<KResponseExt<KGatewayResult>> {
-        shared.webSocketCompressEnabled = props.compress
         const queryParams: any = {
             compress: props.compress ? 1 : 0
         }
@@ -89,8 +87,18 @@ export class Requests {
         })
     }
 
-    static async createChannelMessage(props: CreateChannelMessageProps) {
+    static async createChannelMessage(props: CreateChannelMessageProps): Promise<
+        KResponseExt<CreateChannelMessageResult>
+    > {
         return this.request(`/api/v3/message/create`, 'POST', props)
+    }
+
+    static async updateChannelMessage(props: EditChannelMessageProps): Promise<KResponseExt<{}>> {
+        return this.request(`/api/v3/message/update`, 'POST', props)
+    }
+
+    static async queryWhoAmI(): Promise<KResponseExt<WhoAmIResult>> {
+        return this.request(`/api/v3/user/me`, 'GET')
     }
 }
 
