@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\utils\krequest\types.ts
  * @Created At    : 2024-05-21 16:30:11
- * @Last Modified : 2024-05-27 14:07:58
+ * @Last Modified : 2024-05-27 16:00:07
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -61,6 +61,11 @@ export interface CreateChannelMessageResult {
     nonce: string
 }
 
+export interface WhoAmIExtendProps {
+    user_id: string
+    guild_id: string
+}
+
 export interface WhoAmIResult {
     id: string
     username: string
@@ -75,4 +80,21 @@ export interface WhoAmIResult {
     mobile_prefix: string
     mobile: string
     invited_count: number
+}
+
+export interface WhoAmIExtendResult {
+    id: string
+    username: string
+    nickname: string
+    identify_num: string
+    online: boolean
+    status: number
+    avatar: string
+    vip_avatar: string
+    is_vip: boolean
+    bot: boolean
+    mobile_verified: boolean
+    roles: number[]
+    joined_at: number
+    active_time: number
 }

@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\openai.ts
  * @Created At    : 2024-05-22 17:45:24
- * @Last Modified : 2024-05-27 15:23:29
+ * @Last Modified : 2024-05-27 15:46:38
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -13,7 +13,7 @@ import { draw } from "radash"
 import { ChatCompletionMessageParam } from "openai/resources"
 import { ContextUnit } from "./types"
 
-if (Env.OPENAI_API_KEYS.length === 0) {
+if (Env.OpenAIKeys.length === 0) {
     die('环境配置错误：OPENAI_API_KEYS')
 }
 
@@ -22,7 +22,7 @@ export async function chatCompletionWithoutStream(
     context: ContextUnit[]
 ): Promise<string> {
     const openai = new OpenAI({
-        apiKey: draw(Env.OPENAI_API_KEYS)!
+        apiKey: draw(Env.OpenAIKeys)!
     })
 
     let messages: Array<ChatCompletionMessageParam> = [

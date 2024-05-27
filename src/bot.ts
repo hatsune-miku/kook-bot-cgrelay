@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\bot.ts
  * @Created At    : 2024-05-21 17:13:02
- * @Last Modified : 2024-05-27 15:00:02
+ * @Last Modified : 2024-05-27 16:08:19
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -13,10 +13,12 @@ import { extractContent, isExplicitlyMentioningBot } from "./utils/kevent/utils"
 import { Requests } from "./utils/krequest/request"
 import { error, info, warn } from "./utils/logging/logger"
 import { die } from "./utils/server/die"
+import { GuildRoleManager } from "./websocket/kwebsocket/guild-role-manager"
 import { KWSHelper } from "./websocket/kwebsocket/kws-helper"
 import { KEvent, KEventType, KSystemEventExtra, KTextChannelExtra } from "./websocket/kwebsocket/types"
 
 const manager = new ContextManager()
+const roleManager = new GuildRoleManager()
 
 export async function main() {
     await tryPrepareBotInformation()
@@ -55,7 +57,10 @@ function handleSevereError(message: string) {
 }
 
 async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
-    if (!isExplicitlyMentioningBot(event, shared.me.id)) {
+    const guildId = event.extra.guild_id
+    const myRoles = await roleManager.getMyRolesAt(guildId, shared.me.id)
+
+    if (!isExplicitlyMentioningBot(event, shared.me.id, myRoles)) {
         return
     }
 

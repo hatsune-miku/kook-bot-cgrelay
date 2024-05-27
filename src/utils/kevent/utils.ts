@@ -1,8 +1,9 @@
 import { KEvent, KTextChannelExtra } from "../../websocket/kwebsocket/types";
 
-export function isExplicitlyMentioningBot(event: KEvent<KTextChannelExtra>, botId: string) {
+export function isExplicitlyMentioningBot(event: KEvent<KTextChannelExtra>, botId: string, botRoles: number[]) {
     try {
         return event.extra.mention.includes(botId)
+            || event.extra.mention_roles.some(role => botRoles.includes(role))
     }
     catch {
         return false

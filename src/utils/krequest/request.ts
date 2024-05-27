@@ -1,18 +1,18 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\utils\krequest\request.ts
  * @Created At    : 2024-05-21 16:22:37
- * @Last Modified : 2024-05-27 15:20:11
+ * @Last Modified : 2024-05-27 16:02:44
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
 
 import { error } from "../logging/logger"
-import { CreateChannelMessageProps, CreateChannelMessageResult, EditChannelMessageProps, KGatewayResult, KResponse, KResponseExt, WhoAmIResult } from "./types"
+import { CreateChannelMessageProps, CreateChannelMessageResult, EditChannelMessageProps, KGatewayResult, KResponse, KResponseExt, WhoAmIExtendProps, WhoAmIExtendResult, WhoAmIResult } from "./types"
 import { KEventType, OpenGatewayProps } from "../../websocket/kwebsocket/types"
 import { Env } from "../env/env"
 
 export const BASE_URL = 'https://www.kookapp.cn'
-export const AUTHORIZATION = `Bot ${Env.BOT_TOKEN}`
+export const AUTHORIZATION = `Bot ${Env.BotToken}`
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
@@ -99,6 +99,10 @@ export class Requests {
 
     static async queryWhoAmI(): Promise<KResponseExt<WhoAmIResult>> {
         return this.request(`/api/v3/user/me`, 'GET')
+    }
+
+    static async queryWhoAmIExtend(props: WhoAmIExtendProps): Promise<KResponseExt<WhoAmIExtendResult>> {
+        return this.request(`/api/v3/user/view`, 'GET', props)
     }
 }
 
