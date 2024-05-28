@@ -1,13 +1,13 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\websocket\kwebsocket\kws-helper.ts
  * @Created At    : 2024-05-27 11:11:32
- * @Last Modified : 2024-05-28 15:59:48
+ * @Last Modified : 2024-05-28 16:56:02
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
 
 import { KEvent, KEventType, KHandshakeMessage, KMessage, KMessageKind, KResumeAckMessage, KSystemEventExtra, KTextChannelExtra, KWSState } from "./types"
-import { error, info, warn } from "../../utils/logging/logger"
+import { info, warn } from "../../utils/logging/logger"
 import { Requests } from "../../utils/krequest/request"
 import WebSocket from "ws"
 import { decompressKMessage } from "../../utils/deflate/deflate"
@@ -121,7 +121,6 @@ export class KWSHelper {
                 break
         }
     }
-
 
     /**
      * 发送信令
