@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\utils\krequest\types.ts
  * @Created At    : 2024-05-21 16:30:11
- * @Last Modified : 2024-05-27 16:00:07
+ * @Last Modified : 2024-05-28 16:38:36
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -19,6 +19,27 @@ export interface KResponse<ResultType> {
     code: number
     message: string
     data: ResultType
+}
+
+export interface KResponseHeader {
+    rateLimit: KRateLimitHeader
+}
+
+export interface KRateLimitHeader {
+    /** 一段时间内，允许的最大请求次数 */
+    requestsAllowed: number
+
+    /** 一段时间内，还剩下的请求次数 */
+    requestsRemaining: number
+
+    /** 一个时间戳（秒），指示何时能恢复到最大次数 */
+    timestampSecondsWhenFullyRecovered: number
+
+    /** 请求数的 bucket? */
+    bucket: string
+
+    /** 是否已经触犯了全局请求次数限制 */
+    didTriggeredGlobalRateLimit: boolean
 }
 
 export interface KGatewayResult {

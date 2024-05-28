@@ -1,23 +1,44 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\utils\krequest\request.ts
  * @Created At    : 2024-05-21 16:22:37
- * @Last Modified : 2024-05-27 16:02:44
+ * @Last Modified : 2024-05-28 16:51:58
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
 
-import { error } from "../logging/logger"
-import { CreateChannelMessageProps, CreateChannelMessageResult, EditChannelMessageProps, KGatewayResult, KResponse, KResponseExt, WhoAmIExtendProps, WhoAmIExtendResult, WhoAmIResult } from "./types"
-import { KEventType, OpenGatewayProps } from "../../websocket/kwebsocket/types"
+import { error, info } from "../logging/logger"
+import { CreateChannelMessageProps, CreateChannelMessageResult, EditChannelMessageProps, KGatewayResult, KRateLimitHeader, KResponse, KResponseExt, KResponseHeader, WhoAmIExtendProps, WhoAmIExtendResult, WhoAmIResult } from "./types"
+import { OpenGatewayProps } from "../../websocket/kwebsocket/types"
 import { Env } from "../env/env"
+import { DateTime } from "luxon"
+import { die } from "../server/die"
 
 export const BASE_URL = 'https://www.kookapp.cn'
 export const AUTHORIZATION = `Bot ${Env.BotToken}`
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
+const bucketToSpeedLimitIndication = new Map<string, KRateLimitHeader | null>()
+
+/** 指示一个时间戳（毫秒），所有请求在此之前都不应该再发给 KOOK */
+let disabledUntil: number = 0
+
 export class Requests {
     static async request<T>(url: string, method: RequestMethod, data?: any): Promise<KResponseExt<T>> {
+        const bucket = url.replace(`/api/v3/`, '')
+
+        if (disabledUntil > DateTime.now().toMillis()) {
+            return fail(1147, `All requests blocked until ${disabledUntil}`)
+        }
+
+        const indication = bucketToSpeedLimitIndication.get(bucket)
+
+        if (indication) {
+            if (indication.requestsRemaining < 10 && Math.random() < 0.5) {
+                return fail(1148, `Too many requests for bucket ${bucket}`)
+            }
+        }
+
         const requestData: object = data ?? {}
         const headers: HeadersInit = {
             'Authorization': AUTHORIZATION,
@@ -36,11 +57,13 @@ export class Requests {
         }
 
         let responseText: string
+        let responseHeader: KResponseHeader | undefined
         let responseObject: KResponse<T>
 
         try {
             const response = await fetch(BASE_URL + url, request)
             responseText = await response.text()
+            responseHeader = extractKResponseHeader(response.headers)
 
             if (response.status !== 200) {
                 return failureFromCode(response.status)
@@ -49,6 +72,20 @@ export class Requests {
         catch (e) {
             error(e)
             return fail(1145, "网络错误")
+        }
+
+        if (responseHeader) {
+            const actualBucket = responseHeader.rateLimit.bucket
+            if (actualBucket !== bucket) {
+                die(`Bucket not match (expected=${bucket}, actual=${actualBucket}).`)
+            }
+
+            if (responseHeader.rateLimit.didTriggeredGlobalRateLimit) {
+                disabledUntil = responseHeader.rateLimit.timestampSecondsWhenFullyRecovered * 1000
+                return fail(1146, "Speed rate hard limit reached.")
+            }
+            bucketToSpeedLimitIndication.set(bucket, responseHeader.rateLimit)
+            info("bucket", bucket, "speed limit indication", responseHeader.rateLimit)
         }
 
         try {
@@ -135,5 +172,27 @@ function failureFromCode(statusCode: number): KResponseExt<any> {
             return fail(500, "服务器错误")
         default:
             return fail(1145, "未知错误")
+    }
+}
+
+function extractKResponseHeader(headers: Headers): KResponseHeader | undefined {
+    const requestsAllowed = headers.get('X-Rate-Limit-Limit')
+    const requestsRemaining = headers.get('X-Rate-Limit-Remaining')
+    const timestampSecondsWhenFullyRecovered = headers.get('X-Rate-Limit-Reset')
+    const bucket = headers.get('X-Rate-Limit-Bucket')
+    const didTriggeredGlobalRateLimit = headers.get('X-Rate-Limit-Global')
+
+    if (!requestsAllowed || !requestsRemaining || !timestampSecondsWhenFullyRecovered || !bucket) {
+        return undefined
+    }
+
+    return {
+        rateLimit: {
+            requestsAllowed: Number.parseInt(requestsAllowed),
+            requestsRemaining: Number.parseInt(requestsRemaining),
+            timestampSecondsWhenFullyRecovered: Number.parseInt(timestampSecondsWhenFullyRecovered),
+            bucket: bucket,
+            didTriggeredGlobalRateLimit: !!didTriggeredGlobalRateLimit,
+        }
     }
 }
