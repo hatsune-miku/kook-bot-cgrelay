@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\openai.ts
  * @Created At    : 2024-05-22 17:45:24
- * @Last Modified : 2024-05-27 16:15:50
+ * @Last Modified : 2024-05-27 18:57:54
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */

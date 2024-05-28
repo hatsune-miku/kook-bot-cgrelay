@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\websocket\kwebsocket\kws-helper.ts
  * @Created At    : 2024-05-27 11:11:32
- * @Last Modified : 2024-05-27 15:23:06
+ * @Last Modified : 2024-05-28 15:59:48
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -11,6 +11,7 @@ import { error, info, warn } from "../../utils/logging/logger"
 import { Requests } from "../../utils/krequest/request"
 import WebSocket from "ws"
 import { decompressKMessage } from "../../utils/deflate/deflate"
+import { KMessageQueue } from "../../utils/pqueue/kmqueue"
 
 /**
  * KOOK WebSocket connection helper
@@ -19,6 +20,7 @@ export class KWSHelper {
     private options: KWSOptions
 
     private pingSenderInterval: NodeJS.Timeout | null = null
+    private clearQueueTimeout: NodeJS.Timeout | null = null
     private lastSn: number = 0
     private lastSessionId: string = ''
     private webSocket: WebSocket | null = null
@@ -29,6 +31,8 @@ export class KWSHelper {
     private onTextChannelEvent: OnTextChannelEvent | null = null
     private onSystemEvent: OnSystemEvent | null = null
     private onReset: OnReset | null = null
+
+    private eventQueue: KMessageQueue<KEvent<unknown>> = new KMessageQueue()
 
     constructor(
         options: KWSHelperOptions = defaultKWSHelperOptions,
@@ -283,28 +287,61 @@ export class KWSHelper {
         }, this.options.resumeOkTimeout)
     }
 
-    async handleReceivedTextChannelEvent(sn: number, messageEvent: KEvent<KTextChannelExtra>) {
+    async handleReceivedTextChannelEvent(sn: number | undefined, messageEvent: KEvent<KTextChannelExtra>) {
         info("Received message:", messageEvent)
         this.onTextChannelEvent?.(messageEvent, sn)
     }
 
-    handleReceivedSystemEvent(sn: number, event: KEvent<KSystemEventExtra>) {
+    handleReceivedSystemEvent(sn: number | undefined, event: KEvent<KSystemEventExtra>) {
         info("Received system event:", event)
         this.onSystemEvent?.(event, sn)
     }
 
     handleReceivedEvent(sn: number | undefined, event: KEvent<unknown>) {
+        const executeEvent = (event: KEvent<unknown>) => {
+            if (event.type === KEventType.System) {
+                this.handleReceivedSystemEvent(sn, event as KEvent<KSystemEventExtra>)
+            }
+            else {
+                this.handleReceivedTextChannelEvent(sn, event as KEvent<KTextChannelExtra>)
+            }
+        }
+
         if (!sn) {
-            error("Received a message without sn")
+            info("Processing event without sn...")
+            executeEvent(event)
             return
         }
-        this.lastSn = sn
 
-        if (event.type === KEventType.System) {
-            this.handleReceivedSystemEvent(sn, event as KEvent<KSystemEventExtra>)
+        // 跳号发生
+        if (sn - this.lastSn > 1) {
+            warn("Jumped serial number detected", "lastSn=", this.lastSn, "sn=", sn)
+
+            this.eventQueue.enqueue(event, sn)
+            if (!this.clearQueueTimeout) {
+                info("Set up clear queue timeout")
+                this.clearQueueTimeout = setTimeout(() => {
+                    info("Time is up! Try emptying queue...")
+                    if (!this.eventQueue.isEmpty()) {
+                        this.handleClearMessageQueueAndSetLastSn()
+                    }
+                    this.clearQueueTimeout = null
+                }, 6000)
+            }
         }
         else {
-            this.handleReceivedTextChannelEvent(sn, event as KEvent<KTextChannelExtra>)
+            // 没有跳号，处理
+            executeEvent(event)
+            this.lastSn = sn
+
+            // 只有没跳号的信令发来了，才有意义去检测严格递增
+            if (!this.eventQueue.isEmpty()) {
+                info("One missing SN has finally received.")
+                if (this.eventQueue.isPriorityStrictAscending(this.lastSn)) {
+                    info("Jumped SN resolved. Clearing queue and processing ", this.eventQueue.size(), "events...")
+                    this.handleClearMessageQueueAndSetLastSn()
+                }
+            }
         }
     }
 
@@ -433,6 +470,16 @@ export class KWSHelper {
         this.dispatchKMessage(message)
     }
 
+    handleClearMessageQueueAndSetLastSn() {
+        let maxSn = this.lastSn
+        while (!this.eventQueue.isEmpty()) {
+            const [event, priority] = this.eventQueue.dequeue()!
+            maxSn = Math.max(maxSn, priority)
+            this.handleReceivedEvent(undefined, event)
+        }
+        this.eventQueue.clear()
+        this.lastSn = maxSn
+    }
 }
 
 export interface OnSevereError {
@@ -440,11 +487,11 @@ export interface OnSevereError {
 }
 
 export interface OnTextChannelEvent {
-    (event: KEvent<KTextChannelExtra>, sn: number): void
+    (event: KEvent<KTextChannelExtra>, sn: number | undefined): void
 }
 
 export interface OnSystemEvent {
-    (event: KEvent<KSystemEventExtra>, sn: number): void
+    (event: KEvent<KSystemEventExtra>, sn: number | undefined): void
 }
 
 export interface OnReset {
