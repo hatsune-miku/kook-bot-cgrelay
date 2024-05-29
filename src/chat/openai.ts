@@ -8,12 +8,9 @@
 
 import OpenAI from "openai"
 import { Env } from "../utils/env/env"
-import { die } from "../utils/server/die"
 import { draw } from "radash"
 import { ChatCompletionMessageParam } from "openai/resources"
 import { ContextUnit } from "./types"
-die('环境配置错误：OPENAI_API_KEYS')
-}
 
 export async function chatCompletionWithoutStream(context: ContextUnit[]): Promise<string> {
     const openai = new OpenAI({
