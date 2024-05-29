@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\openai.ts
  * @Created At    : 2024-05-22 17:45:24
- * @Last Modified : 2024-05-29 19:09:09
+ * @Last Modified : 2024-05-29 19:34:35
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -23,8 +23,14 @@ export async function chatCompletionWithoutStream(context: ContextUnit[]): Promi
     })
 
     let messages: Array<ChatCompletionMessageParam> = [
-        { role: 'system', content: '你是ChatGPT，目前作为某即时通讯平台的一个Bot，为任何向你提问的用户提供简短的解答。' },
-        ...context,
+        { role: 'system', content: '你是ChatGPT，作为某即时通讯平台的Bot，为用户提供简短的解答。你将看到[name: content]的发言形式。' },
+        ...context.map(unit => ({
+            ...unit,
+            content: `${unit.name}: ${unit.content}`,
+
+            // 奇怪的名字会让chatgpt的库崩溃
+            name: undefined,
+        })),
     ]
 
     if (messages.length > 12) {
