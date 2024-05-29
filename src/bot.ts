@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\bot.ts
  * @Created At    : 2024-05-21 17:13:02
- * @Last Modified : 2024-05-29 18:33:43
+ * @Last Modified : 2024-05-29 19:05:55
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -118,9 +118,12 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     }
 
     const createdMessage = sendResult.data
+    const context = directivesManager.isGroupChatEnabled()
+        ? manager.getMixedContext()
+        : manager.getContext(author.id)
     const modelResponse = await chatCompletionWithoutStream(
         author.nickname,
-        manager.getContext(author.id),
+        context,
     )
 
     info('model response', modelResponse)
