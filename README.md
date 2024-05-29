@@ -17,4 +17,4 @@
 - 对话上下文
 - 支持 Deflate 压缩
 
-![Demo](doc/cgrelay-test.png)
+![Demo](doc/demo2.png)
