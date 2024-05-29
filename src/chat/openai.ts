@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\chat\openai.ts
  * @Created At    : 2024-05-22 17:45:24
- * @Last Modified : 2024-05-29 19:34:35
+ * @Last Modified : 2024-05-29 23:00:54
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -12,9 +12,7 @@ import { die } from "../utils/server/die"
 import { draw } from "radash"
 import { ChatCompletionMessageParam } from "openai/resources"
 import { ContextUnit } from "./types"
-
-if (Env.OpenAIKeys.length === 0) {
-    die('环境配置错误：OPENAI_API_KEYS')
+die('环境配置错误：OPENAI_API_KEYS')
 }
 
 export async function chatCompletionWithoutStream(context: ContextUnit[]): Promise<string> {
@@ -23,7 +21,7 @@ export async function chatCompletionWithoutStream(context: ContextUnit[]): Promi
     })
 
     let messages: Array<ChatCompletionMessageParam> = [
-        { role: 'system', content: '你是ChatGPT，作为某即时通讯平台的Bot，为用户提供简短的解答。你将看到[name: content]的发言形式。' },
+        { role: 'system', content: '你是ChatGPT，作为某即时通讯平台的Bot，为用户提供简短的解答。你将看到[name: content]的发言形式，方便你区分不同用户。' },
         ...context.map(unit => ({
             ...unit,
             content: `${unit.name}: ${unit.content}`,
