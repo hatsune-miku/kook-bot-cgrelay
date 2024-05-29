@@ -149,6 +149,20 @@ export class ChatDirectivesManager {
         })
     }
 
+    async handleHelp(event: ParseEventResultValid) {
+        const directives = prepareBuiltinDirectives(this)
+        const content = directives.map(directive => [
+            '指令: ' + directive.triggerWord,
+            '用法: ' + `@我 /${directive.triggerWord} ${directive.parameterDescription}`,
+            '用途: ' + directive.description,
+            '权限: ' + directive.permissionGroups.join(', '),
+        ].join('\n')).join('\n==========\n')
+        this.respondToUser({
+            originalEvent: event.originalEvent,
+            content: content,
+        })
+    }
+
     setGroupChat(enabled: boolean) {
         this.groupChat = enabled
     }
@@ -243,13 +257,15 @@ export class ChatDirectivesManager {
             return
         }
         // TODO
-        if (parsedEvent.userProperties.metadata.identify_num !== '6308') {
-            if (!parsedEvent.userProperties.roles.some(r => directiveItem.permissionGroups.includes(r))) {
-                this.respondToUser({
-                    originalEvent: parsedEvent.originalEvent,
-                    content: '权限不足，无法完成操作'
-                })
-                return
+        if (!directiveItem.permissionGroups.includes('everyone')) {
+            if (parsedEvent.userProperties.metadata.identify_num !== '6308') {
+                if (!parsedEvent.userProperties.roles.some(r => directiveItem.permissionGroups.includes(r))) {
+                    this.respondToUser({
+                        originalEvent: parsedEvent.originalEvent,
+                        content: '权限不足，无法完成操作'
+                    })
+                    return
+                }
             }
         }
         directiveItem.handler(parsedEvent)
@@ -275,7 +291,7 @@ function prepareBuiltinDirectives(manager: ChatDirectivesManager): ChatDirective
         },
         {
             triggerWord: 'assign',
-            parameterDescription: '<role> to @user',
+            parameterDescription: '<role> @user',
             description: '添加 <role> 角色给@的人',
             defaultValue: undefined,
             permissionGroups: ['admin'],
@@ -283,7 +299,7 @@ function prepareBuiltinDirectives(manager: ChatDirectivesManager): ChatDirective
         },
         {
             triggerWord: 'revoke',
-            parameterDescription: '<role> from @user',
+            parameterDescription: '<role> @user',
             description: '移除@的人的 <role> 角色',
             defaultValue: undefined,
             permissionGroups: ['admin'],
@@ -297,6 +313,14 @@ function prepareBuiltinDirectives(manager: ChatDirectivesManager): ChatDirective
             permissionGroups: ['everyone'],
             handler: manager.handleQuery.bind(manager),
         },
+        {
+            triggerWord: 'help',
+            parameterDescription: '',
+            description: '查看帮助',
+            defaultValue: undefined,
+            permissionGroups: ['everyone'],
+            handler: manager.handleHelp.bind(manager),
+        }
     ]
 }
 
