@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\bot.ts
  * @Created At    : 2024-05-21 17:13:02
- * @Last Modified : 2024-05-29 19:05:55
+ * @Last Modified : 2024-05-29 19:08:37
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -103,7 +103,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
         return
     }
 
-    manager.appendToContext(author.id, 'user', content)
+    manager.appendToContext(author.id, displayName, 'user', content)
 
     const sendResult = await Requests.createChannelMessage({
         type: KEventType.KMarkdown,
@@ -127,7 +127,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     )
 
     info('model response', modelResponse)
-    manager.appendToContext(author.id, 'assistant', modelResponse)
+    manager.appendToContext(author.id, 'ChatGPT', 'assistant', modelResponse)
 
     const updateResult = await Requests.updateChannelMessage({
         msg_id: createdMessage.msg_id,

@@ -20,13 +20,15 @@ export class ContextManager {
 
     appendToContext(
         userId: string,
+        displayName: string,
         role: ContextUnit['role'],
         content: ContextUnit['content']
     ) {
         const context = this.getContext(userId)
         context.push({
-            role,
-            content,
+            role: role,
+            name: displayName,
+            content: content,
             timestamp: Date.now(),
         })
 
