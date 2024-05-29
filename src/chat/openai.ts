@@ -14,16 +14,13 @@ import { ContextUnit } from "./types"
 
 function makeContext(groupChat: boolean, context: ContextUnit[]): ChatCompletionMessageParam[] {
     if (groupChat) {
+        const units = context.map(unit => ({
+            role: unit.role === 'user' ? 'system' : 'assistant',
+            content: unit.role === 'user' ? `${unit.name}说: ${unit.content}` : unit.content,
+        }))
         return [
-            { role: 'system', content: '你是ChatGPT，作为某即时通讯平台的Bot，为用户提供简短的解答。你将看到[name: content]的发言形式，方便你区分不同用户。' },
-            ...context.map(unit => ({
-                ...unit,
-                content: unit.role === 'user'
-                    ? `${unit.name}: ${unit.content}`
-                    : unit.content,
-                name: undefined,
-                timestamp: undefined,
-            })),
+            { role: 'system', content: '你是ChatGPT，作为某即时通讯平台的Bot，为每个用户提供简短的解答。' },
+            ...units as ChatCompletionMessageParam[]
         ]
     }
     return [
