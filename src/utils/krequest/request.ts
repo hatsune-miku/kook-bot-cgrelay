@@ -1,13 +1,13 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\utils\krequest\request.ts
  * @Created At    : 2024-05-21 16:22:37
- * @Last Modified : 2024-05-28 16:51:58
+ * @Last Modified : 2024-05-29 18:15:42
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
 
 import { error, info } from "../logging/logger"
-import { CreateChannelMessageProps, CreateChannelMessageResult, EditChannelMessageProps, KGatewayResult, KRateLimitHeader, KResponse, KResponseExt, KResponseHeader, WhoAmIExtendProps, WhoAmIExtendResult, WhoAmIResult } from "./types"
+import { CreateChannelMessageProps, CreateChannelMessageResult, EditChannelMessageProps, KGatewayResult, KRateLimitHeader, KResponse, KResponseExt, KResponseHeader, WhoAmIExtendProps as QueryUserProps, WhoAmIExtendResult as QueryUserResult, WhoAmIResult } from "./types"
 import { OpenGatewayProps } from "../../websocket/kwebsocket/types"
 import { Env } from "../env/env"
 import { DateTime } from "luxon"
@@ -138,7 +138,7 @@ export class Requests {
         return this.request(`/api/v3/user/me`, 'GET')
     }
 
-    static async queryWhoAmIExtend(props: WhoAmIExtendProps): Promise<KResponseExt<WhoAmIExtendResult>> {
+    static async queryUser(props: QueryUserProps): Promise<KResponseExt<QueryUserResult>> {
         return this.request(`/api/v3/user/view`, 'GET', props)
     }
 }

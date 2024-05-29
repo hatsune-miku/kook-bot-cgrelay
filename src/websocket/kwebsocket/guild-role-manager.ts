@@ -15,7 +15,7 @@ export class GuildRoleManager {
         }
 
         info("getMyRolesAt cache miss, querying...")
-        const result = await Requests.queryWhoAmIExtend({
+        const result = await Requests.queryUser({
             user_id: userId,
             guild_id: guildId,
         })
