@@ -11,9 +11,10 @@ export class ContextManager {
     }
 
     getMixedContext(): ContextUnit[] {
-        const units = Object.keys(this.userIdToContext)
-            .map(userId => this.userIdToContext.get(userId)!)
-            .flat()
+        const units = []
+        for (const context of this.userIdToContext.values()) {
+            units.push(...context)
+        }
         units.sort((a, b) => a.timestamp - b.timestamp)
         return units.slice(units.length - 12)
     }
@@ -32,6 +33,7 @@ export class ContextManager {
             timestamp: Date.now(),
         })
 
+        console.log("Pushed", displayName, content)
         if (context.length > 12) {
             context.splice(context.length - 12)
         }

@@ -1,6 +1,6 @@
 export interface ContextUnit {
     role: 'assistant' | 'user'
-    content: string
     name: string
+    content: string
     timestamp: number
 }

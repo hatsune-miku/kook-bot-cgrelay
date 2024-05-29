@@ -121,7 +121,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     const context = directivesManager.isGroupChatEnabled()
         ? manager.getMixedContext()
         : manager.getContext(author.id)
-    const modelResponse = await chatCompletionWithoutStream(context)
+    const modelResponse = await chatCompletionWithoutStream(directivesManager.isGroupChatEnabled(), context)
 
     info('model response', modelResponse)
     manager.appendToContext(author.id, 'ChatGPT', 'assistant', modelResponse)

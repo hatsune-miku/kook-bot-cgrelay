@@ -9,7 +9,7 @@ import { map } from "radash"
 
 export class ChatDirectivesManager {
     private userIdToProperties = new Map<string, UserProperties>()
-    private groupChat = false
+    private groupChat = true
 
     constructor(private eventEmitter: EventEmitter) {
 
