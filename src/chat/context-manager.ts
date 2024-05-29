@@ -15,6 +15,7 @@ export class ContextManager {
             .map(userId => this.userIdToContext.get(userId)!)
             .flat()
         units.sort((a, b) => a.timestamp - b.timestamp)
+        console.log(units.slice(0, 12))
         return units.slice(0, 12)
     }
 
