@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\bot.ts
  * @Created At    : 2024-05-21 17:13:02
- * @Last Modified : 2024-05-30 12:55:24
+ * @Last Modified : 2024-05-30 14:13:23
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -64,10 +64,10 @@ async function tryPrepareBotInformation() {
 
     if (!querySelfResult.success) {
         die(`Query-self failed: ${querySelfResult.message}`)
-        return
     }
+
     if (!whoAmI.bot) {
-        warn(`KOOK said I am NOT a bot. 震惊.`)
+        warn(`KOOK说我不是bot. 震惊!`)
     }
 
     const displayName = `${whoAmI.username}#${whoAmI.identify_num}`
@@ -102,6 +102,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     directivesManager.tryInitializeForUser(author)
     const parsedEvent = await directivesManager.tryParseEvent(content, event)
     if (parsedEvent.shouldIntercept) {
+        info("It's a directive. Processing...")
         parsedEvent.mentionUserIds = parsedEvent.mentionUserIds.filter(id => id !== shared.me.id)
         parsedEvent.mentionRoleIds = parsedEvent.mentionRoleIds.filter(rid => !myRoles.includes(rid))
         directivesManager.dispatchDirectives(parsedEvent)
@@ -122,11 +123,12 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
         return
     }
 
+    const isGroupChat = directivesManager.isGroupChatEnabled()
     const createdMessage = sendResult.data
-    const context = directivesManager.isGroupChatEnabled()
+    const context = isGroupChat
         ? manager.getMixedContext()
         : manager.getContext(author.id)
-    const modelResponse = await chatCompletionWithoutStream(directivesManager.isGroupChatEnabled(), context)
+    const modelResponse = await chatCompletionWithoutStream(isGroupChat, context)
 
     info('model response', modelResponse)
     manager.appendToContext(author.id, 'ChatGPT', 'assistant', modelResponse)
@@ -136,6 +138,15 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
         content: modelResponse,
         quote: event.msg_id,
     })
+
+    setTimeout(() => {
+        // 过段时间重发更新消息，为了尝试缓解消息修改有时候客户端收不到的问题
+        Requests.updateChannelMessage({
+            msg_id: createdMessage.msg_id,
+            content: modelResponse,
+            quote: event.msg_id,
+        })
+    }, 3000)
 
     if (!updateResult.success) {
         error("Failed to update message", createdMessage.msg_id, "reason:", updateResult.message)
