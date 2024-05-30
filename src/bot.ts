@@ -1,7 +1,7 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\bot.ts
  * @Created At    : 2024-05-21 17:13:02
- * @Last Modified : 2024-05-29 19:22:42
+ * @Last Modified : 2024-05-30 12:55:24
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
@@ -83,6 +83,11 @@ function handleSevereError(message: string) {
 async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     const guildId = event.extra.guild_id
     const myRoles = await roleManager.getMyRolesAt(guildId, shared.me.id)
+    const isSentByMe = event.author_id == shared.me.id
+
+    if (isSentByMe) {
+        return
+    }
 
     if (!isExplicitlyMentioningBot(event, shared.me.id, myRoles)) {
         return
