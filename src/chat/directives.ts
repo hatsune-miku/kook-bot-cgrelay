@@ -6,354 +6,494 @@ import e from "express"
 import { displayNameFromUser } from "../utils"
 import { Requests } from "../utils/krequest/request"
 import { map } from "radash"
+import { extractContent } from "../utils/kevent/utils"
+import fetch from "node-fetch"
 
 export class ChatDirectivesManager {
-    private userIdToProperties = new Map<string, UserProperties>()
-    private groupChat = true
+  private userIdToProperties = new Map<string, UserProperties>()
+  private userIdToV2TokenHeaders = new Map<string, Record<string, string>>()
+  private groupChat = true
 
-    constructor(private eventEmitter: EventEmitter) {
+  constructor(private eventEmitter: EventEmitter) {}
 
+  respondToUser(params: RespondToUserParameters) {
+    this.eventEmitter.emit(Events.RespondToUser, params)
+  }
+
+  handleGroupChat(event: ParseEventResultValid) {
+    if (event.parameter === "on") {
+      this.setGroupChat(true)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "好！已启用群聊模式！",
+      })
+    } else if (event.parameter === "off") {
+      this.setGroupChat(false)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "好！已关闭群聊模式！",
+      })
+    } else {
+      this.setGroupChat(false)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "参数不合法，应该输入 on 或者 off",
+      })
+    }
+  }
+
+  async handleAssignRole(event: ParseEventResultValid) {
+    if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
+      // 用户常见的错误，@到role而非具体用户
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦",
+      })
+      return
     }
 
-    respondToUser(params: RespondToUserParameters) {
-        this.eventEmitter.emit(Events.RespondToUser, params)
+    const role = event.parameter
+    if (!role) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "权限不能为空",
+      })
+      return
     }
 
-    handleGroupChat(event: ParseEventResultValid) {
-        if (event.parameter === 'on') {
-            this.setGroupChat(true)
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: "好！已启用群聊模式！",
-            })
-        }
-        else if (event.parameter === 'off') {
-            this.setGroupChat(false)
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: "好！已关闭群聊模式！",
-            })
-        }
-        else {
-            this.setGroupChat(false)
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: "参数不合法，应该输入 on 或者 off",
-            })
-        }
+    const mentionedUsers = await map(
+      event.mentionUserIds,
+      async (userId) =>
+        await this.getUser(userId, event.originalEvent.extra.guild_id)
+    )
+
+    mentionedUsers.forEach((user) => {
+      this.assignRole(user, role)
+    })
+
+    const displayNames = mentionedUsers.map((user) =>
+      displayNameFromUser(user.metadata)
+    )
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: `好耶！已将 ${role} 授予 ${
+        displayNames.length
+      } 位用户: ${displayNames.join(", ")}`,
+    })
+  }
+
+  async handleRevokeRole(event: ParseEventResultValid) {
+    if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
+      // 用户常见的错误，@到role而非具体用户
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦",
+      })
+      return
     }
 
-    async handleAssignRole(event: ParseEventResultValid) {
-        if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
-            // 用户常见的错误，@到role而非具体用户
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦"
-            })
-            return
-        }
-
-        const role = event.parameter
-        if (!role) {
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: '权限不能为空'
-            })
-            return
-        }
-
-        const mentionedUsers = await map(
-            event.mentionUserIds,
-            async (userId) => await this.getUser(userId, event.originalEvent.extra.guild_id)
-        )
-
-        mentionedUsers.forEach(user => {
-            this.assignRole(user, role)
-        })
-
-        const displayNames = mentionedUsers.map(user => displayNameFromUser(user.metadata))
-        this.respondToUser({
-            originalEvent: event.originalEvent,
-            content: `好耶！已将 ${role} 授予 ${displayNames.length} 位用户: ${displayNames.join(', ')}`
-        })
+    const role = event.parameter
+    if (!role) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "权限不能为空",
+      })
+      return
     }
 
-    async handleRevokeRole(event: ParseEventResultValid) {
-        if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
-            // 用户常见的错误，@到role而非具体用户
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦"
-            })
-            return
-        }
+    const mentionedUsers = await map(
+      event.mentionUserIds,
+      async (userId) =>
+        await this.getUser(userId, event.originalEvent.extra.guild_id)
+    )
 
-        const role = event.parameter
-        if (!role) {
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: '权限不能为空'
-            })
-            return
-        }
+    mentionedUsers.forEach((user) => {
+      this.revokeRole(user, role)
+    })
 
-        const mentionedUsers = await map(
-            event.mentionUserIds,
-            async (userId) => await this.getUser(userId, event.originalEvent.extra.guild_id)
-        )
+    const displayNames = mentionedUsers.map((user) =>
+      displayNameFromUser(user.metadata)
+    )
 
-        mentionedUsers.forEach(user => {
-            this.revokeRole(user, role)
-        })
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: `太惨了，你已从 ${
+        displayNames.length
+      } 位用户 (${displayNames.join(", ")}) 的手中收回了 ${role} 权限。`,
+    })
+  }
 
-        const displayNames = mentionedUsers.map(user => displayNameFromUser(user.metadata))
-
-        this.respondToUser({
-            originalEvent: event.originalEvent,
-            content: `太惨了，你已从 ${displayNames.length} 位用户 (${displayNames.join(', ')}) 的手中收回了 ${role} 权限。`
-        })
+  async handleQuery(event: ParseEventResultValid) {
+    if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
+      // 用户常见的错误，@到role而非具体用户
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦",
+      })
+      return
     }
 
-    async handleQuery(event: ParseEventResultValid) {
-        if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
-            // 用户常见的错误，@到role而非具体用户
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦"
-            })
-            return
-        }
-
-        const userIds = event.mentionUserIds
-        if (userIds.length !== 1) {
-            this.respondToUser({
-                originalEvent: event.originalEvent,
-                content: "能且只能同时查询 1 位用户的信息！"
-            })
-            return
-        }
-
-        const user = await this.getUser(userIds[0], event.originalEvent.extra.guild_id)
-        const displayName = displayNameFromUser(user.metadata)
-        const list = [
-            '名字: ' + displayName,
-            '权限: ' + user.roles.join(', '),
-            '是否为 Bot: ' + (user.metadata.bot ? '是' : '不是'),
-            '在线状态: ' + (user.metadata.online ? '在线' : '离线'),
-            '封禁状态: ' + (user.metadata.status === 10 ? '封禁中' : '无'),
-            '手机验证: ' + (user.metadata.mobile_verified ? '已验证' : '未验证'),
-        ]
-        this.respondToUser({
-            originalEvent: event.originalEvent,
-            content: list.join('\n')
-        })
+    const userIds = event.mentionUserIds
+    if (userIds.length !== 1) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "能且只能同时查询 1 位用户的信息！",
+      })
+      return
     }
 
-    async handleHelp(event: ParseEventResultValid) {
-        const directives = prepareBuiltinDirectives(this)
-        const content = directives.map(directive => [
-            '指令: ' + directive.triggerWord,
-            '用法: ' + `@我 /${directive.triggerWord} ${directive.parameterDescription}`,
-            '用途: ' + directive.description,
-            '权限: ' + directive.permissionGroups.join(', '),
-        ].join('\n')).join('\n==========\n')
-        this.respondToUser({
-            originalEvent: event.originalEvent,
-            content: content,
-        })
+    const user = await this.getUser(
+      userIds[0],
+      event.originalEvent.extra.guild_id
+    )
+    const displayName = displayNameFromUser(user.metadata)
+    const list = [
+      "名字: " + displayName,
+      "权限: " + user.roles.join(", "),
+      "是否为 Bot: " + (user.metadata.bot ? "是" : "不是"),
+      "在线状态: " + (user.metadata.online ? "在线" : "离线"),
+      "封禁状态: " + (user.metadata.status === 10 ? "封禁中" : "无"),
+      "手机验证: " + (user.metadata.mobile_verified ? "已验证" : "未验证"),
+    ]
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: list.join("\n"),
+    })
+  }
+
+  async handleUpdateToken(event: ParseEventResultValid) {
+    const stringWithToken = extractContent(event.originalEvent)
+    const mayBeHeaders = stringWithToken.split("\n")
+    const headers = {
+      cookie: "",
+      "x-client-sessionid": "",
+    }
+    const featuredKeys = Object.keys(headers)
+
+    for (const mayBeHeader of mayBeHeaders) {
+      const components = mayBeHeader.split(":")
+      if (components.length !== 2) {
+        continue
+      }
+      const [key, value] = components
+      const headerKey = key.trim().toLowerCase() as keyof typeof headers
+      if (!featuredKeys.includes(headerKey)) {
+        continue
+      }
+      headers[headerKey] = value.trim()
     }
 
-    setGroupChat(enabled: boolean) {
-        this.groupChat = enabled
+    if (Object.values(headers).some((v) => v === "")) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "数据不完整，无法更新",
+      })
+      return
     }
 
-    isGroupChatEnabled() {
-        return this.groupChat
+    this.userIdToV2TokenHeaders.set(event.userProperties.metadata.id, headers)
+
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: "token 解析成功，数据已记录。请输入 /play 更新游戏状态。",
+    })
+  }
+
+  async handlePlay(event: ParseEventResultValid) {
+    const userId = event.userProperties.metadata.id
+    if (!this.userIdToV2TokenHeaders.has(userId)) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content:
+          "你未曾记录过 token 或我忘记了。请先输入 /updatetoken 记录 token",
+      })
+      return
     }
 
-    tryInitializeForUser(user: KUser) {
-        if (!this.userIdToProperties.has(user.id)) {
-            this.userIdToProperties.set(user.id, makeDefaultUserPropertiesFor(user))
-        }
+    const headers = this.userIdToV2TokenHeaders.get(userId)!
+    const fullHeaders = {
+      ...headers,
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "zh",
+      "Content-Type": "application/json; charset=utf-8",
+      Referer: "https://www.kookapp.cn/",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "cross-site",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) KOOK/0.84.6 Chrome/108.0.5359.215 Electron/22.3.27 Safari/537.36",
+      "sec-ch-ua": '"Not?A_Brand";v="8", "Chromium";v="108"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
+      "x-client-utm": "official.site....pc",
+      Connection: "keep-alive",
+      Accept: "*/*",
     }
 
-    async getUser(userId: string, guildId: string): Promise<UserProperties> {
-        if (this.userIdToProperties.has(userId)) {
-            return this.userIdToProperties.get(userId)!
-        }
+    const result = await fetch(
+      `https://www.kookapp.cn/api/v2/games/activity/2104008`,
+      {
+        method: "PATCH",
+        headers: fullHeaders,
+      }
+    )
 
-        const result = await Requests.queryUser({
-            guild_id: guildId,
-            user_id: userId,
-        })
-        if (!result.success) {
-            throw new Error(`User request failed: ${result.message}`)
-        }
-
-        this.tryInitializeForUser(result.data)
-        return {
-            roles: [],
-            metadata: result.data
-        }
+    if (!result.ok) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: `请求失败，状态码: ${result.status}`,
+      })
+      return
     }
 
-    assignRole(user: UserProperties, role: string) {
-        if (user.roles.includes(role)) {
-            return
-        }
-        user.roles.push(role)
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: "已尝试更新游戏状态",
+    })
+    return
+  }
+
+  async handleHelp(event: ParseEventResultValid) {
+    const directives = prepareBuiltinDirectives(this)
+    const content = directives
+      .map((directive) =>
+        [
+          "指令: " + directive.triggerWord,
+          "用法: " +
+            `@我 /${directive.triggerWord} ${directive.parameterDescription}`,
+          "用途: " + directive.description,
+          "权限: " + directive.permissionGroups.join(", "),
+        ].join("\n")
+      )
+      .join("\n==========\n")
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: content,
+    })
+  }
+
+  setGroupChat(enabled: boolean) {
+    this.groupChat = enabled
+  }
+
+  isGroupChatEnabled() {
+    return this.groupChat
+  }
+
+  tryInitializeForUser(user: KUser) {
+    if (!this.userIdToProperties.has(user.id)) {
+      this.userIdToProperties.set(user.id, makeDefaultUserPropertiesFor(user))
+    }
+  }
+
+  async getUser(userId: string, guildId: string): Promise<UserProperties> {
+    if (this.userIdToProperties.has(userId)) {
+      return this.userIdToProperties.get(userId)!
     }
 
-    revokeRole(user: UserProperties, role: string) {
-        const roles = user.roles
-        if (!roles.includes(role)) {
-            return
-        }
-        user.roles = roles.filter(r => r !== role)
+    const result = await Requests.queryUser({
+      guild_id: guildId,
+      user_id: userId,
+    })
+    if (!result.success) {
+      throw new Error(`User request failed: ${result.message}`)
     }
 
-    /**
-     * 每条 Directive 消息形如下列之一：
-     * - `@ChatBot /directive`
-     * - `@ChatBot /directive @user`
-     * - `@ChatBot /directive <parameter>`
-     * - `@ChatBot /directive <parameter> @user`
-     * 
-     * 不以 / 开头的消息，不是 Directives
-     */
-    async tryParseEvent(extractedContent: string, event: KEvent<KTextChannelExtra>): Promise<ParseEventResult> {
-        if (!extractedContent.startsWith('/')) {
-            return { shouldIntercept: false }
-        }
+    this.tryInitializeForUser(result.data)
+    return {
+      roles: [],
+      metadata: result.data,
+    }
+  }
 
-        // Skip slash
-        const [directive, parameter] = extractedContent.slice(1)
-            .split(' ')
-            .filter(part => part.trim() !== '')
+  assignRole(user: UserProperties, role: string) {
+    if (user.roles.includes(role)) {
+      return
+    }
+    user.roles.push(role)
+  }
 
-        if (directive === '') {
-            return { shouldIntercept: false }
-        }
+  revokeRole(user: UserProperties, role: string) {
+    const roles = user.roles
+    if (!roles.includes(role)) {
+      return
+    }
+    user.roles = roles.filter((r) => r !== role)
+  }
 
-        const user = await this.getUser(event.author_id, event.extra.guild_id)
-
-        return {
-            shouldIntercept: true,
-            directive: directive,
-            parameter: parameter,
-            mentionRoleIds: event.extra.mention_roles,
-            mentionUserIds: event.extra.mention,
-            originalEvent: event,
-            userProperties: user,
-        }
+  /**
+   * 每条 Directive 消息形如下列之一：
+   * - `@ChatBot /directive`
+   * - `@ChatBot /directive @user`
+   * - `@ChatBot /directive <parameter>`
+   * - `@ChatBot /directive <parameter> @user`
+   *
+   * 不以 / 开头的消息，不是 Directives
+   */
+  async tryParseEvent(
+    extractedContent: string,
+    event: KEvent<KTextChannelExtra>
+  ): Promise<ParseEventResult> {
+    if (!extractedContent.startsWith("/")) {
+      return { shouldIntercept: false }
     }
 
-    dispatchDirectives(parsedEvent: ParseEventResultValid) {
-        const { directive } = parsedEvent
-        const builtinDirectives = prepareBuiltinDirectives(this)
-        const directiveItem = builtinDirectives.find(d => d.triggerWord === directive)
-        if (!directiveItem) {
-            warn("Match failed", directiveItem)
-            return
-        }
-        // TODO
-        if (!directiveItem.permissionGroups.includes('everyone')) {
-            if (parsedEvent.userProperties.metadata.identify_num !== '6308') {
-                if (!parsedEvent.userProperties.roles.some(r => directiveItem.permissionGroups.includes(r))) {
-                    this.respondToUser({
-                        originalEvent: parsedEvent.originalEvent,
-                        content: '权限不足，无法完成操作'
-                    })
-                    return
-                }
-            }
-        }
-        directiveItem.handler(parsedEvent)
+    // Skip slash
+    const [directive, parameter] = extractedContent
+      .slice(1)
+      .split(" ")
+      .filter((part) => part.trim() !== "")
+
+    if (directive === "") {
+      return { shouldIntercept: false }
     }
+
+    const user = await this.getUser(event.author_id, event.extra.guild_id)
+
+    return {
+      shouldIntercept: true,
+      directive: directive,
+      parameter: parameter,
+      mentionRoleIds: event.extra.mention_roles,
+      mentionUserIds: event.extra.mention,
+      originalEvent: event,
+      userProperties: user,
+    }
+  }
+
+  dispatchDirectives(parsedEvent: ParseEventResultValid) {
+    const { directive } = parsedEvent
+    const builtinDirectives = prepareBuiltinDirectives(this)
+    const directiveItem = builtinDirectives.find(
+      (d) => d.triggerWord === directive
+    )
+    if (!directiveItem) {
+      warn("Match failed", directiveItem)
+      return
+    }
+    // TODO
+    if (!directiveItem.permissionGroups.includes("everyone")) {
+      if (parsedEvent.userProperties.metadata.identify_num !== "6308") {
+        if (
+          !parsedEvent.userProperties.roles.some((r) =>
+            directiveItem.permissionGroups.includes(r)
+          )
+        ) {
+          this.respondToUser({
+            originalEvent: parsedEvent.originalEvent,
+            content: "权限不足，无法完成操作",
+          })
+          return
+        }
+      }
+    }
+    directiveItem.handler(parsedEvent)
+  }
 }
 
 function makeDefaultUserPropertiesFor(user: KUser): UserProperties {
-    return {
-        roles: [],
-        metadata: user,
-    }
+  return {
+    roles: [],
+    metadata: user,
+  }
 }
 
-function prepareBuiltinDirectives(manager: ChatDirectivesManager): ChatDirectiveItem[] {
-    return [
-        {
-            triggerWord: 'groupchat',
-            parameterDescription: 'on|off',
-            description: '群聊模式，启用后，各人与机器人的对话将不再隔离。机器人能够分辨哪句话是谁说的。',
-            defaultValue: 'off',
-            permissionGroups: ['admin'],
-            handler: manager.handleGroupChat.bind(manager),
-        },
-        {
-            triggerWord: 'assign',
-            parameterDescription: '<role> @user',
-            description: '添加 <role> 角色给@的人',
-            defaultValue: undefined,
-            permissionGroups: ['admin'],
-            handler: manager.handleAssignRole.bind(manager),
-        },
-        {
-            triggerWord: 'revoke',
-            parameterDescription: '<role> @user',
-            description: '移除@的人的 <role> 角色',
-            defaultValue: undefined,
-            permissionGroups: ['admin'],
-            handler: manager.handleRevokeRole.bind(manager),
-        },
-        {
-            triggerWord: 'query',
-            parameterDescription: '@user',
-            description: '查询@的人的基本信息',
-            defaultValue: undefined,
-            permissionGroups: ['everyone'],
-            handler: manager.handleQuery.bind(manager),
-        },
-        {
-            triggerWord: 'help',
-            parameterDescription: '',
-            description: '查看帮助',
-            defaultValue: undefined,
-            permissionGroups: ['everyone'],
-            handler: manager.handleHelp.bind(manager),
-        }
-    ]
+function prepareBuiltinDirectives(
+  manager: ChatDirectivesManager
+): ChatDirectiveItem[] {
+  return [
+    {
+      triggerWord: "groupchat",
+      parameterDescription: "on|off",
+      description:
+        "群聊模式，启用后，各人与机器人的对话将不再隔离。机器人能够分辨哪句话是谁说的。",
+      defaultValue: "off",
+      permissionGroups: ["admin"],
+      handler: manager.handleGroupChat.bind(manager),
+    },
+    {
+      triggerWord: "assign",
+      parameterDescription: "<role> @user",
+      description: "添加 <role> 角色给@的人",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleAssignRole.bind(manager),
+    },
+    {
+      triggerWord: "revoke",
+      parameterDescription: "<role> @user",
+      description: "移除@的人的 <role> 角色",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleRevokeRole.bind(manager),
+    },
+    {
+      triggerWord: "query",
+      parameterDescription: "@user",
+      description: "查询@的人的基本信息",
+      defaultValue: undefined,
+      permissionGroups: ["everyone"],
+      handler: manager.handleQuery.bind(manager),
+    },
+    {
+      triggerWord: "updatetoken",
+      parameterDescription: "<fiddler-data>",
+      description: "更新 KOOK 账号 token",
+      defaultValue: undefined,
+      permissionGroups: ["everyone"],
+      handler: manager.handleUpdateToken.bind(manager),
+    },
+    {
+      triggerWord: "play",
+      parameterDescription: "",
+      description: "更新游戏状态为 miku",
+      defaultValue: undefined,
+      permissionGroups: ["everyone"],
+      handler: manager.handlePlay.bind(manager),
+    },
+    {
+      triggerWord: "help",
+      parameterDescription: "",
+      description: "查看帮助",
+      defaultValue: undefined,
+      permissionGroups: ["everyone"],
+      handler: manager.handleHelp.bind(manager),
+    },
+  ]
 }
 
-export type ParseEventResult = ParseEventResultDontIntercept | ParseEventResultValid
+export type ParseEventResult =
+  | ParseEventResultDontIntercept
+  | ParseEventResultValid
 
 export interface ParseEventResultDontIntercept {
-    shouldIntercept: false
+  shouldIntercept: false
 }
 
 export interface ParseEventResultValid {
-    shouldIntercept: true
-    directive: string
-    parameter: string | undefined
-    mentionRoleIds: number[]
-    mentionUserIds: string[]
-    originalEvent: KEvent<KTextChannelExtra>
-    userProperties: UserProperties
+  shouldIntercept: true
+  directive: string
+  parameter: string | undefined
+  mentionRoleIds: number[]
+  mentionUserIds: string[]
+  originalEvent: KEvent<KTextChannelExtra>
+  userProperties: UserProperties
 }
 
 export interface UserProperties {
-    roles: string[]
-    metadata: KUser
+  roles: string[]
+  metadata: KUser
 }
 
 export interface ChatDirectiveHandler {
-    (parsedEvent: ParseEventResultValid): void
+  (parsedEvent: ParseEventResultValid): void
 }
 
 export interface ChatDirectiveItem {
-    triggerWord: string
-    parameterDescription: string
-    description: string
-    defaultValue: string | undefined
-    permissionGroups: string[]
-    handler: ChatDirectiveHandler
+  triggerWord: string
+  parameterDescription: string
+  description: string
+  defaultValue: string | undefined
+  permissionGroups: string[]
+  handler: ChatDirectiveHandler
 }
