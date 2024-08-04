@@ -1,16 +1,10 @@
-import { WebSocket } from "ws"
-import { KWebSocketState } from "../websocket/types"
+import { WhoAmIDefault } from "../mock/placeholders";
+import { WhoAmIResult } from "../utils/krequest/types";
 
 export interface SharedType {
-    webSocket: WebSocket | null
-    webSocketAddress: string
-    webSocketCompressEnabled: boolean
-    webSocketState: KWebSocketState
+  me: WhoAmIResult;
 }
 
 export const shared: SharedType = {
-    webSocket: null,
-    webSocketAddress: '',
-    webSocketCompressEnabled: true,
-    webSocketState: KWebSocketState.IDLE,
-}
+  me: WhoAmIDefault
+};

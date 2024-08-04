@@ -1,127 +1,233 @@
 /*
  * @Path          : \kook-bot-cgrelay\src\utils\krequest\request.ts
  * @Created At    : 2024-05-21 16:22:37
- * @Last Modified : 2024-05-22 16:44:50
+ * @Last Modified : 2024-05-29 18:15:42
  * @By            : Guan Zhen (guanzhen@chuanyuapp.com)
  * @Description   : Magic. Don't touch.
  */
 
-import { error } from "../logging/logger"
-import { CreateChannelMessageProps, KGatewayResult, KResponse, KResponseExt } from "./types"
-import { shared } from "../../global/shared"
-import { KEventType, OpenGatewayProps } from "../../websocket/types"
-import { Env } from "../env/env"
+import { error, info } from "../logging/logger";
+import {
+  CreateChannelMessageProps,
+  CreateChannelMessageResult,
+  EditChannelMessageProps,
+  KGatewayResult,
+  KRateLimitHeader,
+  KResponse,
+  KResponseExt,
+  KResponseHeader,
+  WhoAmIExtendProps as QueryUserProps,
+  WhoAmIExtendResult as QueryUserResult,
+  WhoAmIResult
+} from "./types";
+import { OpenGatewayProps } from "../../websocket/kwebsocket/types";
+import { Env } from "../env/env";
+import { DateTime } from "luxon";
+import { die } from "../server/die";
 
-export const BASE_URL = 'https://www.kookapp.cn'
-export const AUTHORIZATION = `Bot ${Env.BOT_TOKEN}`
+export const BASE_URL = "https://www.kookapp.cn";
+export const AUTHORIZATION = `Bot ${Env.BotToken}`;
 
-export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+export type RequestMethod = "GET" | "POST" | "PUT" | "DELETE";
+
+const bucketToSpeedLimitIndication = new Map<string, KRateLimitHeader | null>();
+
+/** 指示一个时间戳（毫秒），所有请求在此之前都不应该再发给 KOOK */
+let disabledUntil: number = 0;
 
 export class Requests {
-    static async request<T>(url: string, method: RequestMethod, data?: any): Promise<KResponseExt<T>> {
-        const requestData: object = data ?? {}
-        const headers: HeadersInit = {
-            'Authorization': AUTHORIZATION,
-            'Content-type': 'application/json',
-        }
-        const request: RequestInit = {
-            headers: headers,
-            method: method,
-        }
+  static async request<T>(
+    url: string,
+    method: RequestMethod,
+    data?: any
+  ): Promise<KResponseExt<T>> {
+    const bucket = url.replace(`/api/v3/`, "");
 
-        if (method === 'POST' || method === 'PUT') {
-            request.body = JSON.stringify(requestData)
-        }
-        else {
-            url += '?' + queryFromObject(requestData)
-        }
-
-        let responseText: string
-        let responseObject: KResponse<T>
-
-        try {
-            const response = await fetch(BASE_URL + url, request)
-            responseText = await response.text()
-
-            if (response.status !== 200) {
-                return failureFromCode(response.status)
-            }
-        }
-        catch (e) {
-            error(e)
-            return fail(1145, "网络错误")
-        }
-
-        try {
-            responseObject = JSON.parse(responseText)
-        }
-        catch {
-            error('返回数据不是有效的JSON')
-            return fail(1145, "返回数据不是有效的JSON")
-        }
-
-        return { success: true, ...responseObject }
+    if (disabledUntil > DateTime.now().toMillis()) {
+      return fail(1147, `All requests blocked until ${disabledUntil}`);
     }
 
-    /**
-     * @param props compress: 是否压缩？fromDisconnect: 是否为断线重连？
-     * @returns 
-     */
-    static async openGateway(props: OpenGatewayProps): Promise<KResponseExt<KGatewayResult>> {
-        shared.webSocketCompressEnabled = props.compress
-        const queryParams: any = {
-            compress: props.compress ? 1 : 0
-        }
+    const indication = bucketToSpeedLimitIndication.get(bucket);
 
-        if (props.fromDisconnect) {
-            queryParams['resume'] = 1
-            queryParams['sn'] = props.lastProcessedSn
-            queryParams['session_id'] = props.lastSessionId
-        }
-
-        return this.request('/api/v3/gateway/index', 'GET', queryParams)
+    if (indication) {
+      if (indication.requestsRemaining < 10 && Math.random() < 0.5) {
+        return fail(1148, `Too many requests for bucket ${bucket}`);
+      }
     }
 
-    static async reactToMessage(messageId: string, emojiCode: string): Promise<KResponseExt<[]>> {
-        return this.request(`/api/v3/message/add-reaction`, 'POST', {
-            msg_id: messageId,
-            emoji: emojiCode
-        })
+    const requestData: object = data ?? {};
+    const headers: HeadersInit = {
+      Authorization: AUTHORIZATION,
+      "Content-type": "application/json"
+    };
+    const request: RequestInit = {
+      headers: headers,
+      method: method
+    };
+
+    if (method === "POST" || method === "PUT") {
+      request.body = JSON.stringify(requestData);
+    } else {
+      url += "?" + queryFromObject(requestData);
     }
 
-    static async createChannelMessage(props: CreateChannelMessageProps) {
-        return this.request(`/api/v3/message/create`, 'POST', props)
+    let responseText: string;
+    let responseHeader: KResponseHeader | undefined;
+    let responseObject: KResponse<T>;
+
+    try {
+      const response = await fetch(BASE_URL + url, request);
+      responseText = await response.text();
+      responseHeader = extractKResponseHeader(response.headers);
+
+      if (response.status !== 200) {
+        return failureFromCode(response.status);
+      }
+    } catch (e) {
+      error(e);
+      return fail(1145, "网络错误");
     }
+
+    if (responseHeader) {
+      const actualBucket = responseHeader.rateLimit.bucket;
+      if (actualBucket !== bucket) {
+        die(`Bucket not match (expected=${bucket}, actual=${actualBucket}).`);
+      }
+
+      if (responseHeader.rateLimit.didTriggeredGlobalRateLimit) {
+        disabledUntil =
+          responseHeader.rateLimit.timestampSecondsWhenFullyRecovered * 1000;
+        return fail(1146, "Speed rate hard limit reached.");
+      }
+      bucketToSpeedLimitIndication.set(bucket, responseHeader.rateLimit);
+      info(
+        "bucket",
+        bucket,
+        "speed limit indication",
+        responseHeader.rateLimit
+      );
+    }
+
+    try {
+      responseObject = JSON.parse(responseText);
+    } catch {
+      error("返回数据不是有效的JSON");
+      return fail(1145, "返回数据不是有效的JSON");
+    }
+
+    return { success: true, ...responseObject };
+  }
+
+  /**
+   * @param props compress: 是否压缩？fromDisconnect: 是否为断线重连？
+   * @returns
+   */
+  static async openGateway(
+    props: OpenGatewayProps
+  ): Promise<KResponseExt<KGatewayResult>> {
+    const queryParams: any = {
+      compress: props.compress ? 1 : 0
+    };
+
+    if (props.fromDisconnect) {
+      queryParams["resume"] = 1;
+      queryParams["sn"] = props.lastProcessedSn;
+      queryParams["session_id"] = props.lastSessionId;
+    }
+
+    return this.request("/api/v3/gateway/index", "GET", queryParams);
+  }
+
+  static async reactToMessage(
+    messageId: string,
+    emojiCode: string
+  ): Promise<KResponseExt<[]>> {
+    return this.request(`/api/v3/message/add-reaction`, "POST", {
+      msg_id: messageId,
+      emoji: emojiCode
+    });
+  }
+
+  static async createChannelMessage(
+    props: CreateChannelMessageProps
+  ): Promise<KResponseExt<CreateChannelMessageResult>> {
+    return this.request(`/api/v3/message/create`, "POST", props);
+  }
+
+  static async updateChannelMessage(
+    props: EditChannelMessageProps
+  ): Promise<KResponseExt<{}>> {
+    return this.request(`/api/v3/message/update`, "POST", props);
+  }
+
+  static async queryWhoAmI(): Promise<KResponseExt<WhoAmIResult>> {
+    return this.request(`/api/v3/user/me`, "GET");
+  }
+
+  static async queryUser(
+    props: QueryUserProps
+  ): Promise<KResponseExt<QueryUserResult>> {
+    return this.request(`/api/v3/user/view`, "GET", props);
+  }
 }
 
 /**
  * @example {a: 1, b: 2} => 'a=1&b=2'
  */
 export function queryFromObject(obj: Record<string, any>): string {
-    return Object.keys(obj)
-        .map(key => `${key}=${obj[key]}`)
-        .join('&')
+  return Object.keys(obj)
+    .map((key) => `${key}=${obj[key]}`)
+    .join("&");
 }
 
 function fail(code: number, message: string): KResponseExt<any> {
-    return { success: false, message: message, code: code, data: {} }
+  return { success: false, message: message, code: code, data: {} };
 }
 
 function success<T>(message: string, data: T): KResponseExt<T> {
-    return { success: true, message: message, code: 0, data: data }
+  return { success: true, message: message, code: 0, data: data };
 }
 
 function failureFromCode(statusCode: number): KResponseExt<any> {
-    switch (statusCode) {
-        case 401:
-            return fail(401, "未授权")
-        case 403:
-            return fail(403, "禁止访问")
-        case 404:
-            return fail(404, "找不到资源")
-        case 500:
-            return fail(500, "服务器错误")
-        default:
-            return fail(1145, "未知错误")
+  switch (statusCode) {
+    case 401:
+      return fail(401, "未授权");
+    case 403:
+      return fail(403, "禁止访问");
+    case 404:
+      return fail(404, "找不到资源");
+    case 500:
+      return fail(500, "服务器错误");
+    default:
+      return fail(1145, "未知错误");
+  }
+}
+
+function extractKResponseHeader(headers: Headers): KResponseHeader | undefined {
+  const requestsAllowed = headers.get("X-Rate-Limit-Limit");
+  const requestsRemaining = headers.get("X-Rate-Limit-Remaining");
+  const timestampSecondsWhenFullyRecovered = headers.get("X-Rate-Limit-Reset");
+  const bucket = headers.get("X-Rate-Limit-Bucket");
+  const didTriggeredGlobalRateLimit = headers.get("X-Rate-Limit-Global");
+
+  if (
+    !requestsAllowed ||
+    !requestsRemaining ||
+    !timestampSecondsWhenFullyRecovered ||
+    !bucket
+  ) {
+    return undefined;
+  }
+
+  return {
+    rateLimit: {
+      requestsAllowed: Number.parseInt(requestsAllowed),
+      requestsRemaining: Number.parseInt(requestsRemaining),
+      timestampSecondsWhenFullyRecovered: Number.parseInt(
+        timestampSecondsWhenFullyRecovered
+      ),
+      bucket: bucket,
+      didTriggeredGlobalRateLimit: !!didTriggeredGlobalRateLimit
     }
+  };
 }
