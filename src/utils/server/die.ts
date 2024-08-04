@@ -6,18 +6,18 @@
  * @Description   : Magic. Don't touch.
  */
 
-import { KResponseExt } from "../krequest/types"
-import { error } from "../logging/logger"
+import { KResponseExt } from "../krequest/types";
+import { error } from "../logging/logger";
 
 export function die(reason: string): never {
-    error(reason)
-    error('Exiting...')
-    process.exit(1)
+  error(reason);
+  error("Exiting...");
+  process.exit(1);
 }
 
 export function successOrDie(res: KResponseExt<any>, reason?: string) {
-    reason ||= '请求失败'
-    if (!res.success) {
-        die(reason)
-    }
+  reason ||= "请求失败";
+  if (!res.success) {
+    die(reason);
+  }
 }

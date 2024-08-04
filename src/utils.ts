@@ -1,5 +1,5 @@
-import { KUser } from "./websocket/kwebsocket/types"
+import { KUser } from "./websocket/kwebsocket/types";
 
 export function displayNameFromUser(user: KUser) {
-    return `${user.nickname}#${user.identify_num}`
+  return `${user.nickname}#${user.identify_num}`;
 }

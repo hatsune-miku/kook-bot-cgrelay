@@ -6,21 +6,21 @@
  * @Description   : Magic. Don't touch.
  */
 
-import { DateTime } from "luxon"
+import { DateTime } from "luxon";
 
 function log(level: string, ...data: any[]) {
-    const nowFormatted = DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss')
-    console.log(`[${nowFormatted}] [KBot] [${level}]`, data)
+  const nowFormatted = DateTime.now().toFormat("yyyy-MM-dd HH:mm:ss");
+  console.log(`[${nowFormatted}] [KBot] [${level}]`, data);
 }
 
 export function error(...data: any[]) {
-    log('ERROR', data)
+  log("ERROR", data);
 }
 
 export function warn(...data: any[]) {
-    log('WARN', data)
+  log("WARN", data);
 }
 
 export function info(...data: any[]) {
-    log('INFO', data)
+  log("INFO", data);
 }
