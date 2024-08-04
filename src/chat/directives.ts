@@ -1,8 +1,7 @@
 import { EventEmitter } from "stream"
 import { warn } from "../utils/logging/logger"
 import { KEvent, KTextChannelExtra, KUser } from "../websocket/kwebsocket/types"
-import { Events, RespondToUserParameters } from "../events"
-import e from "express"
+import { Events, KCardMessage, RespondToUserParameters } from "../events"
 import { displayNameFromUser } from "../utils"
 import { Requests } from "../utils/krequest/request"
 import { map } from "radash"
@@ -14,11 +13,16 @@ export class ChatDirectivesManager {
   private userIdToV2TokenHeaders = new Map<string, Record<string, string>>()
   private groupChat = true
   private allowOmittingMentioningMe = false
+  private superKookMode = false
 
   constructor(private eventEmitter: EventEmitter) {}
 
   respondToUser(params: RespondToUserParameters) {
     this.eventEmitter.emit(Events.RespondToUser, params)
+  }
+
+  respondCardMessageToUser(params: RespondToUserParameters) {
+    this.eventEmitter.emit(Events.RespondCardMessageToUser, params)
   }
 
   handleGroupChat(event: ParseEventResultValid) {
@@ -159,6 +163,51 @@ export class ChatDirectivesManager {
     }
   }
 
+  async handleSwitchSuperKookMode(event: ParseEventResultValid) {
+    if (event.parameter === "on") {
+      this.setSuperKookMode(true)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content:
+          "哼哼！无情开搓机器已启动，所有对话有 (spl)15%(spl) 的概率被选为幸运对话"
+      })
+      const cardMessage: KCardMessage = [
+        {
+          type: "card",
+          theme: "primary",
+          size: "lg",
+          modules: [
+            {
+              type: "container",
+              elements: [
+                {
+                  type: "image",
+                  src: "https://img.kookapp.cn/emojis/5534585084574314/0ZxPSw8llx04g04g.png"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+      this.respondCardMessageToUser({
+        originalEvent: event.originalEvent,
+        content: JSON.stringify(cardMessage)
+      })
+    } else if (event.parameter === "off") {
+      this.setSuperKookMode(false)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "呜呜呜，无情开搓机器已关闭"
+      })
+    } else {
+      this.setSuperKookMode(false)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "参数不合法，应该输入 on 或者 off"
+      })
+    }
+  }
+
   async handleQuery(event: ParseEventResultValid) {
     if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
       // 用户常见的错误，@到role而非具体用户
@@ -262,12 +311,20 @@ export class ChatDirectivesManager {
     this.allowOmittingMentioningMe = enabled
   }
 
+  setSuperKookMode(enabled: boolean) {
+    this.superKookMode = enabled
+  }
+
   isGroupChatEnabled() {
     return this.groupChat
   }
 
   isAllowOmittingMentioningMeEnabled() {
     return this.allowOmittingMentioningMe
+  }
+
+  isSuperKookModeEnabled() {
+    return this.superKookMode
   }
 
   tryInitializeForUser(user: KUser) {
@@ -423,8 +480,16 @@ function prepareBuiltinDirectives(
       parameterDescription: "on|off",
       description: '是否允许省略"@我"而直接使用指令',
       defaultValue: undefined,
-      permissionGroups: ["admin"],
+      permissionGroups: ["everyone"],
       handler: manager.handleSwitchUsingNamespaceMiku.bind(manager)
+    },
+    {
+      triggerWord: "kook",
+      parameterDescription: "on|off",
+      description: "哼哼~",
+      defaultValue: undefined,
+      permissionGroups: ["everyone"],
+      handler: manager.handleSwitchSuperKookMode.bind(manager)
     },
     {
       triggerWord: "query",

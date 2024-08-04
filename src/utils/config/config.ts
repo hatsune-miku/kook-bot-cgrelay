@@ -1,4 +1,4 @@
-import { openSync, readFileSync, writeFileSync } from "fs"
+import { readFileSync, writeFileSync } from "fs"
 import { get } from "radash"
 
 export default class ConfigUtils {

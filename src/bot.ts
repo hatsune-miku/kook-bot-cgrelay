@@ -23,7 +23,7 @@ import {
   KTextChannelExtra
 } from "./websocket/kwebsocket/types"
 import { EventEmitter } from "stream"
-import { Events, RespondToUserParameters } from "./events"
+import { Events, KCardMessage, RespondToUserParameters } from "./events"
 import { displayNameFromUser } from "./utils"
 import ConfigUtils from "./utils/config/config"
 
@@ -45,6 +45,10 @@ export async function main() {
   helper.startWebsocket()
 
   botEventEmitter.on(Events.RespondToUser, handleRespondToUserEvent)
+  botEventEmitter.on(
+    Events.RespondCardMessageToUser,
+    handleRespondCardMessageToUserEvent
+  )
 
   info("Initialization OK")
 }
@@ -52,6 +56,26 @@ export async function main() {
 async function handleRespondToUserEvent(event: RespondToUserParameters) {
   const result = await Requests.createChannelMessage({
     type: KEventType.KMarkdown,
+    target_id: event.originalEvent.target_id,
+    content: event.content,
+    quote: event.originalEvent.msg_id
+  })
+
+  if (!result.success) {
+    error(
+      "Failed to respond to",
+      displayNameFromUser(event.originalEvent.extra.author),
+      "reason:",
+      result.message
+    )
+  }
+}
+
+async function handleRespondCardMessageToUserEvent(
+  event: RespondToUserParameters
+) {
+  const result = await Requests.createChannelMessage({
+    type: KEventType.Card,
     target_id: event.originalEvent.target_id,
     content: event.content,
     quote: event.originalEvent.msg_id
@@ -105,6 +129,27 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const displayName = displayNameFromUser(author)
   const isMentioningMe = isExplicitlyMentioningBot(event, shared.me.id, myRoles)
   info(displayName, "said to me:", content)
+
+  // 无情开搓模式无视其它设置
+  if (directivesManager.isSuperKookModeEnabled()) {
+    // 15%
+    if (Math.random() < 0.15) {
+      Requests.reactToMessage(
+        event.msg_id,
+        "[:开搓:3542195235225538/ENmJHIVOBk034034]"
+      ).then((res) => {
+        info(res)
+        if (!res.success) {
+          error(
+            "Failed to react to message",
+            event.msg_id,
+            "reason:",
+            res.message
+          )
+        }
+      })
+    }
+  }
 
   // @我或者可以免除@我，都可以处理指令
   if (
