@@ -7,12 +7,13 @@ import { displayNameFromUser } from "../utils"
 import { Requests } from "../utils/krequest/request"
 import { map } from "radash"
 import { extractContent } from "../utils/kevent/utils"
-import fetch from "node-fetch"
+import ConfigUtils from "../utils/config/config"
 
 export class ChatDirectivesManager {
   private userIdToProperties = new Map<string, UserProperties>()
   private userIdToV2TokenHeaders = new Map<string, Record<string, string>>()
   private groupChat = true
+  private allowOmittingMentioningMe = false
 
   constructor(private eventEmitter: EventEmitter) {}
 
@@ -71,9 +72,16 @@ export class ChatDirectivesManager {
       this.assignRole(user, role)
     })
 
+    mentionedUsers.forEach((user) => {
+      ConfigUtils.setUserConfig(user.metadata.id, {
+        roles: user.roles
+      })
+    })
+
     const displayNames = mentionedUsers.map((user) =>
       displayNameFromUser(user.metadata)
     )
+
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: `好耶！已将 ${role} 授予 ${
@@ -111,6 +119,12 @@ export class ChatDirectivesManager {
       this.revokeRole(user, role)
     })
 
+    mentionedUsers.forEach((user) => {
+      ConfigUtils.setUserConfig(user.metadata.id, {
+        roles: user.roles
+      })
+    })
+
     const displayNames = mentionedUsers.map((user) =>
       displayNameFromUser(user.metadata)
     )
@@ -121,6 +135,28 @@ export class ChatDirectivesManager {
         displayNames.length
       } 位用户 (${displayNames.join(", ")}) 的手中收回了 ${role} 权限。`
     })
+  }
+
+  async handleSwitchUsingNamespaceMiku(event: ParseEventResultValid) {
+    if (event.parameter === "on") {
+      this.setAllowOmittingMentioningMe(true)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "好！后续指令无需再@我即可执行！"
+      })
+    } else if (event.parameter === "off") {
+      this.setAllowOmittingMentioningMe(false)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "disabled `allowOmittingMentioningMe`"
+      })
+    } else {
+      this.setAllowOmittingMentioningMe(false)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "参数不合法，应该输入 on 或者 off"
+      })
+    }
   }
 
   async handleQuery(event: ParseEventResultValid) {
@@ -222,8 +258,16 @@ export class ChatDirectivesManager {
     this.groupChat = enabled
   }
 
+  setAllowOmittingMentioningMe(enabled: boolean) {
+    this.allowOmittingMentioningMe = enabled
+  }
+
   isGroupChatEnabled() {
     return this.groupChat
+  }
+
+  isAllowOmittingMentioningMeEnabled() {
+    return this.allowOmittingMentioningMe
   }
 
   tryInitializeForUser(user: KUser) {
@@ -247,7 +291,7 @@ export class ChatDirectivesManager {
 
     this.tryInitializeForUser(result.data)
     return {
-      roles: [],
+      roles: ConfigUtils.getUserConfig(userId).roles ?? [],
       metadata: result.data
     }
   }
@@ -317,8 +361,8 @@ export class ChatDirectivesManager {
       warn("Match failed", directiveItem)
       return
     }
-    // TODO
     if (!directiveItem.permissionGroups.includes("everyone")) {
+      // TODO 哈哈哈哈哈哈
       if (parsedEvent.userProperties.metadata.identify_num !== "6308") {
         if (
           !parsedEvent.userProperties.roles.some((r) =>
@@ -338,8 +382,9 @@ export class ChatDirectivesManager {
 }
 
 function makeDefaultUserPropertiesFor(user: KUser): UserProperties {
+  const config = ConfigUtils.getUserConfig(user.id)
   return {
-    roles: [],
+    roles: config.roles ?? [],
     metadata: user
   }
 }
@@ -372,6 +417,14 @@ function prepareBuiltinDirectives(
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleRevokeRole.bind(manager)
+    },
+    {
+      triggerWord: "using_namespace_miku",
+      parameterDescription: "on|off",
+      description: '是否允许省略"@我"而直接使用指令',
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleSwitchUsingNamespaceMiku.bind(manager)
     },
     {
       triggerWord: "query",

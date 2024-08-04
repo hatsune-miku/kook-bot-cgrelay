@@ -82,12 +82,12 @@ export interface CreateChannelMessageResult {
   nonce: string
 }
 
-export interface WhoAmIExtendProps {
+export interface QuerySelfExtendProps {
   user_id: string
   guild_id: string
 }
 
-export interface WhoAmIResult {
+export interface QuerySelfResult {
   id: string
   username: string
   identify_num: string

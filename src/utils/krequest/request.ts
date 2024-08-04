@@ -15,10 +15,10 @@ import {
   KRateLimitHeader,
   KResponse,
   KResponseExt,
+  QuerySelfResult,
   KResponseHeader,
-  WhoAmIExtendProps as QueryUserProps,
-  WhoAmIExtendResult as QueryUserResult,
-  WhoAmIResult
+  QuerySelfExtendProps as QueryUserProps,
+  WhoAmIExtendResult as QueryUserResult
 } from "./types"
 import { OpenGatewayProps } from "../../websocket/kwebsocket/types"
 import { Env } from "../env/env"
@@ -155,7 +155,7 @@ export class Requests {
     return this.request(`/api/v3/message/update`, "POST", props)
   }
 
-  static async queryWhoAmI(): Promise<KResponseExt<WhoAmIResult>> {
+  static async querySelfUser(): Promise<KResponseExt<QuerySelfResult>> {
     return this.request(`/api/v3/user/me`, "GET")
   }
 

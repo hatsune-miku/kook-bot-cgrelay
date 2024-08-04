@@ -53,10 +53,15 @@ export async function chatCompletionWithoutStream(
     messages = messages.slice(messages.length - 10)
   }
 
-  const completion = await openai.chat.completions.create({
-    messages: messages,
-    model: "gpt-4o"
-  })
+  try {
+    const completion = await openai.chat.completions.create({
+      messages: messages,
+      model: "gpt-4o"
+    })
 
-  return completion.choices[0].message.content ?? "<no content>"
+    return completion.choices[0].message.content ?? "<no content>"
+  } catch (e) {
+    console.error(e)
+    return "<与 OpenAI 的连接超时>"
+  }
 }

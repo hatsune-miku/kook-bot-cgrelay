@@ -20,20 +20,20 @@ import {
   KEvent,
   KEventType,
   KSystemEventExtra,
-  KTextChannelExtra,
-  KUser
+  KTextChannelExtra
 } from "./websocket/kwebsocket/types"
 import { EventEmitter } from "stream"
 import { Events, RespondToUserParameters } from "./events"
 import { displayNameFromUser } from "./utils"
+import ConfigUtils from "./utils/config/config"
 
 const botEventEmitter = new EventEmitter()
-
-const manager = new ContextManager()
+const contextManager = new ContextManager()
 const roleManager = new GuildRoleManager()
 const directivesManager = new ChatDirectivesManager(botEventEmitter)
 
 export async function main() {
+  ConfigUtils.initialize()
   await tryPrepareBotInformation()
 
   const helper = new KWSHelper({
@@ -69,21 +69,22 @@ async function handleRespondToUserEvent(event: RespondToUserParameters) {
 
 async function tryPrepareBotInformation() {
   info("Querying self information from KOOK...")
-  const querySelfResult = await Requests.queryWhoAmI()
-  const whoAmI = querySelfResult.data
+  const querySelfResult = await Requests.querySelfUser()
+  const self = querySelfResult.data
 
   if (!querySelfResult.success) {
+    // 写php写的
     die(`Query-self failed: ${querySelfResult.message}`)
   }
 
-  if (!whoAmI.bot) {
-    warn(`KOOK说我不是bot. 震惊!`)
+  if (!self.bot) {
+    warn(`KOOK说我不是bot，震惊!`)
   }
 
-  const displayName = `${whoAmI.username}#${whoAmI.identify_num}`
-  info("I am", displayName, "with user id", whoAmI.id)
+  const displayName = `${self.username}#${self.identify_num}`
+  info("I am", displayName, "with user id", self.id)
 
-  shared.me = whoAmI
+  shared.me = self
 }
 
 function handleSevereError(message: string) {
@@ -99,31 +100,45 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     return
   }
 
-  if (!isExplicitlyMentioningBot(event, shared.me.id, myRoles)) {
-    return
-  }
-
   const content = extractContent(event)
   const author = event.extra.author
   const displayName = displayNameFromUser(author)
+  const isMentioningMe = isExplicitlyMentioningBot(event, shared.me.id, myRoles)
   info(displayName, "said to me:", content)
 
-  // Process directives
-  directivesManager.tryInitializeForUser(author)
-  const parsedEvent = await directivesManager.tryParseEvent(content, event)
-  if (parsedEvent.shouldIntercept) {
-    info("It's a directive. Processing...")
-    parsedEvent.mentionUserIds = parsedEvent.mentionUserIds.filter(
-      (id) => id !== shared.me.id
-    )
-    parsedEvent.mentionRoleIds = parsedEvent.mentionRoleIds.filter(
-      (rid) => !myRoles.includes(rid)
-    )
-    directivesManager.dispatchDirectives(parsedEvent)
+  // @我或者可以免除@我，都可以处理指令
+  if (
+    isMentioningMe ||
+    directivesManager.isAllowOmittingMentioningMeEnabled()
+  ) {
+    // Process directives
+    directivesManager.tryInitializeForUser(author)
+    const parsedEvent = await directivesManager.tryParseEvent(content, event)
+    if (parsedEvent.shouldIntercept) {
+      info("It's a directive. Processing...")
+      parsedEvent.mentionUserIds = parsedEvent.mentionUserIds.filter(
+        (id) => id !== shared.me.id
+      )
+      parsedEvent.mentionRoleIds = parsedEvent.mentionRoleIds.filter(
+        (rid) => !myRoles.includes(rid)
+      )
+      directivesManager.dispatchDirectives(parsedEvent)
+      return
+    }
+  }
+
+  // 只有明确@我的消息才会被交给ChatGPT
+  if (!isMentioningMe) {
     return
   }
 
-  manager.appendToContext(author.id, author.nickname, "user", content)
+  contextManager.appendToContext(
+    guildId,
+    author.id,
+    author.nickname,
+    "user",
+    content
+  )
 
   const sendResult = await Requests.createChannelMessage({
     type: KEventType.KMarkdown,
@@ -140,27 +155,31 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const isGroupChat = directivesManager.isGroupChatEnabled()
   const createdMessage = sendResult.data
   const context = isGroupChat
-    ? manager.getMixedContext()
-    : manager.getContext(author.id)
+    ? contextManager.getMixedContext(guildId)
+    : contextManager.getContext(guildId, author.id)
+
+  info("context", context)
+
   const modelResponse = await chatCompletionWithoutStream(isGroupChat, context)
 
   info("model response", modelResponse)
-  manager.appendToContext(author.id, "ChatGPT", "assistant", modelResponse)
+  contextManager.appendToContext(
+    guildId,
+    author.id,
+    "ChatGPT",
+    "assistant",
+    modelResponse
+  )
 
-  const updateResult = await Requests.updateChannelMessage({
-    msg_id: createdMessage.msg_id,
-    content: modelResponse,
-    quote: event.msg_id
-  })
-
-  setTimeout(() => {
-    // 过段时间重发更新消息，为了尝试缓解消息修改有时候客户端收不到的问题
+  const performUpdateMessage = () =>
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
       content: modelResponse,
       quote: event.msg_id
     })
-  }, 3000)
+
+  const updateResult = await performUpdateMessage()
+  setTimeout(performUpdateMessage, 3000)
 
   if (!updateResult.success) {
     error(

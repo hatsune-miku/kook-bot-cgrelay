@@ -1,6 +1,6 @@
-import { WhoAmIResult } from "../utils/krequest/types"
+import { QuerySelfResult } from "../utils/krequest/types"
 
-export const WhoAmIDefault: WhoAmIResult = {
+export const QuerySelfDefault: QuerySelfResult = {
   id: "114514",
   username: "hello",
   identify_num: "1234",
