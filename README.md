@@ -1,11 +1,7 @@
-## TODO List
-
-- 测试覆盖
-- WebSocket 那部分状态机可以做成库
-
----
-
 # CGRelay - KOOK Bot
+
+<img src="doc/kook-badge.png" height="28px" />
+<img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white" />
 
 一个 KOOK WebSocket 机器人的练手项目。
 
@@ -19,6 +15,17 @@
 - 指令支持
 - 支持 Deflate 压缩
 
+## 示例：群聊模式
+
 ![Demo](doc/demo2.png)
 
-![Demo](doc/demo3.png)
+## 示例：指令系统
+
+![Demo](doc/demo3.jpg)
+
+## TODO List
+
+- 测试覆盖
+- WebSocket 那部分状态机可以做成库
+
+---
