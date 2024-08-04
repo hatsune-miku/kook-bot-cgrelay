@@ -5,10 +5,10 @@ export default class ConfigUtils {
   static config?: Config
 
   static initialize() {
-    const configRaw = readFileSync("config.json", {
-      encoding: "utf-8"
-    })
     try {
+      const configRaw = readFileSync("config.json", {
+        encoding: "utf-8"
+      })
       ConfigUtils.config = JSON.parse(configRaw)
     } catch (e) {
       ConfigUtils.config = {}
