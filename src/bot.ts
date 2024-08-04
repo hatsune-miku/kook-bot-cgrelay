@@ -136,7 +136,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     if (Math.random() < 0.15) {
       Requests.reactToMessage(
         event.msg_id,
-        "[:开搓:3542195235225538/ENmJHIVOBk034034]"
+        "[:dddd:3266153385602000/6dZZoQvszK034034]"
       ).then((res) => {
         info(res)
         if (!res.success) {
