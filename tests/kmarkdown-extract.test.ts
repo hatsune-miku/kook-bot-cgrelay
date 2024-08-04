@@ -1,4 +1,4 @@
-import { removingKMarkdownLabels } from "../src/utils/kevent/utils";
+import { removingKMarkdownLabels } from "../src/utils/kevent/utils"
 
 test("kmarkdown extract works", () => {
   expect(
@@ -6,5 +6,5 @@ test("kmarkdown extract works", () => {
       "met",
       "rol"
     ])
-  ).toBe("content");
-});
+  ).toBe("content")
+})

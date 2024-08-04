@@ -1,4 +1,4 @@
-import { WhoAmIResult } from "../utils/krequest/types";
+import { WhoAmIResult } from "../utils/krequest/types"
 
 export const WhoAmIDefault: WhoAmIResult = {
   id: "114514",
@@ -14,4 +14,4 @@ export const WhoAmIDefault: WhoAmIResult = {
   mobile_prefix: "1",
   mobile: "1111111111",
   invited_count: 5
-};
+}

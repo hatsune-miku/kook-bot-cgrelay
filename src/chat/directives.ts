@@ -1,48 +1,44 @@
-import { EventEmitter } from "stream";
-import { warn } from "../utils/logging/logger";
-import {
-  KEvent,
-  KTextChannelExtra,
-  KUser
-} from "../websocket/kwebsocket/types";
-import { Events, RespondToUserParameters } from "../events";
-import e from "express";
-import { displayNameFromUser } from "../utils";
-import { Requests } from "../utils/krequest/request";
-import { map } from "radash";
-import { extractContent } from "../utils/kevent/utils";
-import fetch from "node-fetch";
+import { EventEmitter } from "stream"
+import { warn } from "../utils/logging/logger"
+import { KEvent, KTextChannelExtra, KUser } from "../websocket/kwebsocket/types"
+import { Events, RespondToUserParameters } from "../events"
+import e from "express"
+import { displayNameFromUser } from "../utils"
+import { Requests } from "../utils/krequest/request"
+import { map } from "radash"
+import { extractContent } from "../utils/kevent/utils"
+import fetch from "node-fetch"
 
 export class ChatDirectivesManager {
-  private userIdToProperties = new Map<string, UserProperties>();
-  private userIdToV2TokenHeaders = new Map<string, Record<string, string>>();
-  private groupChat = true;
+  private userIdToProperties = new Map<string, UserProperties>()
+  private userIdToV2TokenHeaders = new Map<string, Record<string, string>>()
+  private groupChat = true
 
   constructor(private eventEmitter: EventEmitter) {}
 
   respondToUser(params: RespondToUserParameters) {
-    this.eventEmitter.emit(Events.RespondToUser, params);
+    this.eventEmitter.emit(Events.RespondToUser, params)
   }
 
   handleGroupChat(event: ParseEventResultValid) {
     if (event.parameter === "on") {
-      this.setGroupChat(true);
+      this.setGroupChat(true)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "好！已启用群聊模式！"
-      });
+      })
     } else if (event.parameter === "off") {
-      this.setGroupChat(false);
+      this.setGroupChat(false)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "好！已关闭群聊模式！"
-      });
+      })
     } else {
-      this.setGroupChat(false);
+      this.setGroupChat(false)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "参数不合法，应该输入 on 或者 off"
-      });
+      })
     }
   }
 
@@ -52,38 +48,38 @@ export class ChatDirectivesManager {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦"
-      });
-      return;
+      })
+      return
     }
 
-    const role = event.parameter;
+    const role = event.parameter
     if (!role) {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "权限不能为空"
-      });
-      return;
+      })
+      return
     }
 
     const mentionedUsers = await map(
       event.mentionUserIds,
       async (userId) =>
         await this.getUser(userId, event.originalEvent.extra.guild_id)
-    );
+    )
 
     mentionedUsers.forEach((user) => {
-      this.assignRole(user, role);
-    });
+      this.assignRole(user, role)
+    })
 
     const displayNames = mentionedUsers.map((user) =>
       displayNameFromUser(user.metadata)
-    );
+    )
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: `好耶！已将 ${role} 授予 ${
         displayNames.length
       } 位用户: ${displayNames.join(", ")}`
-    });
+    })
   }
 
   async handleRevokeRole(event: ParseEventResultValid) {
@@ -92,39 +88,39 @@ export class ChatDirectivesManager {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦"
-      });
-      return;
+      })
+      return
     }
 
-    const role = event.parameter;
+    const role = event.parameter
     if (!role) {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "权限不能为空"
-      });
-      return;
+      })
+      return
     }
 
     const mentionedUsers = await map(
       event.mentionUserIds,
       async (userId) =>
         await this.getUser(userId, event.originalEvent.extra.guild_id)
-    );
+    )
 
     mentionedUsers.forEach((user) => {
-      this.revokeRole(user, role);
-    });
+      this.revokeRole(user, role)
+    })
 
     const displayNames = mentionedUsers.map((user) =>
       displayNameFromUser(user.metadata)
-    );
+    )
 
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: `太惨了，你已从 ${
         displayNames.length
       } 位用户 (${displayNames.join(", ")}) 的手中收回了 ${role} 权限。`
-    });
+    })
   }
 
   async handleQuery(event: ParseEventResultValid) {
@@ -133,24 +129,24 @@ export class ChatDirectivesManager {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "你应该@具体用户，而不是@某个服务器角色，注意区分哦"
-      });
-      return;
+      })
+      return
     }
 
-    const userIds = event.mentionUserIds;
+    const userIds = event.mentionUserIds
     if (userIds.length !== 1) {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "能且只能同时查询 1 位用户的信息！"
-      });
-      return;
+      })
+      return
     }
 
     const user = await this.getUser(
       userIds[0],
       event.originalEvent.extra.guild_id
-    );
-    const displayName = displayNameFromUser(user.metadata);
+    )
+    const displayName = displayNameFromUser(user.metadata)
     const list = [
       "名字: " + displayName,
       "权限: " + user.roles.join(", "),
@@ -158,53 +154,53 @@ export class ChatDirectivesManager {
       "在线状态: " + (user.metadata.online ? "在线" : "离线"),
       "封禁状态: " + (user.metadata.status === 10 ? "封禁中" : "无"),
       "手机验证: " + (user.metadata.mobile_verified ? "已验证" : "未验证")
-    ];
+    ]
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: list.join("\n")
-    });
+    })
   }
 
   async handleUpdateToken(event: ParseEventResultValid) {
-    const stringWithToken = extractContent(event.originalEvent);
-    const mayBeHeaders = stringWithToken.split("\n");
+    const stringWithToken = extractContent(event.originalEvent)
+    const mayBeHeaders = stringWithToken.split("\n")
     const headers = {
       cookie: "",
       "x-client-sessionid": ""
-    };
-    const featuredKeys = Object.keys(headers);
+    }
+    const featuredKeys = Object.keys(headers)
 
     for (const mayBeHeader of mayBeHeaders) {
-      const components = mayBeHeader.split(":");
+      const components = mayBeHeader.split(":")
       if (components.length !== 2) {
-        continue;
+        continue
       }
-      const [key, value] = components;
-      const headerKey = key.trim().toLowerCase() as keyof typeof headers;
+      const [key, value] = components
+      const headerKey = key.trim().toLowerCase() as keyof typeof headers
       if (!featuredKeys.includes(headerKey)) {
-        continue;
+        continue
       }
-      headers[headerKey] = value.trim();
+      headers[headerKey] = value.trim()
     }
 
     if (Object.values(headers).some((v) => v === "")) {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "数据不完整，无法更新"
-      });
-      return;
+      })
+      return
     }
 
-    this.userIdToV2TokenHeaders.set(event.userProperties.metadata.id, headers);
+    this.userIdToV2TokenHeaders.set(event.userProperties.metadata.id, headers)
 
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: "token 解析成功，数据已记录。请输入 /play 更新游戏状态。"
-    });
+    })
   }
 
   async handleHelp(event: ParseEventResultValid) {
-    const directives = prepareBuiltinDirectives(this);
+    const directives = prepareBuiltinDirectives(this)
     const content = directives
       .map((directive) =>
         [
@@ -215,60 +211,60 @@ export class ChatDirectivesManager {
           "权限: " + directive.permissionGroups.join(", ")
         ].join("\n")
       )
-      .join("\n==========\n");
+      .join("\n==========\n")
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: content
-    });
+    })
   }
 
   setGroupChat(enabled: boolean) {
-    this.groupChat = enabled;
+    this.groupChat = enabled
   }
 
   isGroupChatEnabled() {
-    return this.groupChat;
+    return this.groupChat
   }
 
   tryInitializeForUser(user: KUser) {
     if (!this.userIdToProperties.has(user.id)) {
-      this.userIdToProperties.set(user.id, makeDefaultUserPropertiesFor(user));
+      this.userIdToProperties.set(user.id, makeDefaultUserPropertiesFor(user))
     }
   }
 
   async getUser(userId: string, guildId: string): Promise<UserProperties> {
     if (this.userIdToProperties.has(userId)) {
-      return this.userIdToProperties.get(userId)!;
+      return this.userIdToProperties.get(userId)!
     }
 
     const result = await Requests.queryUser({
       guild_id: guildId,
       user_id: userId
-    });
+    })
     if (!result.success) {
-      throw new Error(`User request failed: ${result.message}`);
+      throw new Error(`User request failed: ${result.message}`)
     }
 
-    this.tryInitializeForUser(result.data);
+    this.tryInitializeForUser(result.data)
     return {
       roles: [],
       metadata: result.data
-    };
+    }
   }
 
   assignRole(user: UserProperties, role: string) {
     if (user.roles.includes(role)) {
-      return;
+      return
     }
-    user.roles.push(role);
+    user.roles.push(role)
   }
 
   revokeRole(user: UserProperties, role: string) {
-    const roles = user.roles;
+    const roles = user.roles
     if (!roles.includes(role)) {
-      return;
+      return
     }
-    user.roles = roles.filter((r) => r !== role);
+    user.roles = roles.filter((r) => r !== role)
   }
 
   /**
@@ -285,20 +281,20 @@ export class ChatDirectivesManager {
     event: KEvent<KTextChannelExtra>
   ): Promise<ParseEventResult> {
     if (!extractedContent.startsWith("/")) {
-      return { shouldIntercept: false };
+      return { shouldIntercept: false }
     }
 
     // Skip slash
     const [directive, parameter] = extractedContent
       .slice(1)
       .split(" ")
-      .filter((part) => part.trim() !== "");
+      .filter((part) => part.trim() !== "")
 
     if (directive === "") {
-      return { shouldIntercept: false };
+      return { shouldIntercept: false }
     }
 
-    const user = await this.getUser(event.author_id, event.extra.guild_id);
+    const user = await this.getUser(event.author_id, event.extra.guild_id)
 
     return {
       shouldIntercept: true,
@@ -308,18 +304,18 @@ export class ChatDirectivesManager {
       mentionUserIds: event.extra.mention,
       originalEvent: event,
       userProperties: user
-    };
+    }
   }
 
   dispatchDirectives(parsedEvent: ParseEventResultValid) {
-    const { directive } = parsedEvent;
-    const builtinDirectives = prepareBuiltinDirectives(this);
+    const { directive } = parsedEvent
+    const builtinDirectives = prepareBuiltinDirectives(this)
     const directiveItem = builtinDirectives.find(
       (d) => d.triggerWord === directive
-    );
+    )
     if (!directiveItem) {
-      warn("Match failed", directiveItem);
-      return;
+      warn("Match failed", directiveItem)
+      return
     }
     // TODO
     if (!directiveItem.permissionGroups.includes("everyone")) {
@@ -332,12 +328,12 @@ export class ChatDirectivesManager {
           this.respondToUser({
             originalEvent: parsedEvent.originalEvent,
             content: "权限不足，无法完成操作"
-          });
-          return;
+          })
+          return
         }
       }
     }
-    directiveItem.handler(parsedEvent);
+    directiveItem.handler(parsedEvent)
   }
 }
 
@@ -345,7 +341,7 @@ function makeDefaultUserPropertiesFor(user: KUser): UserProperties {
   return {
     roles: [],
     metadata: user
-  };
+  }
 }
 
 function prepareBuiltinDirectives(
@@ -401,41 +397,41 @@ function prepareBuiltinDirectives(
       permissionGroups: ["everyone"],
       handler: manager.handleHelp.bind(manager)
     }
-  ];
+  ]
 }
 
 export type ParseEventResult =
   | ParseEventResultDontIntercept
-  | ParseEventResultValid;
+  | ParseEventResultValid
 
 export interface ParseEventResultDontIntercept {
-  shouldIntercept: false;
+  shouldIntercept: false
 }
 
 export interface ParseEventResultValid {
-  shouldIntercept: true;
-  directive: string;
-  parameter: string | undefined;
-  mentionRoleIds: number[];
-  mentionUserIds: string[];
-  originalEvent: KEvent<KTextChannelExtra>;
-  userProperties: UserProperties;
+  shouldIntercept: true
+  directive: string
+  parameter: string | undefined
+  mentionRoleIds: number[]
+  mentionUserIds: string[]
+  originalEvent: KEvent<KTextChannelExtra>
+  userProperties: UserProperties
 }
 
 export interface UserProperties {
-  roles: string[];
-  metadata: KUser;
+  roles: string[]
+  metadata: KUser
 }
 
 export interface ChatDirectiveHandler {
-  (parsedEvent: ParseEventResultValid): void;
+  (parsedEvent: ParseEventResultValid): void
 }
 
 export interface ChatDirectiveItem {
-  triggerWord: string;
-  parameterDescription: string;
-  description: string;
-  defaultValue: string | undefined;
-  permissionGroups: string[];
-  handler: ChatDirectiveHandler;
+  triggerWord: string
+  parameterDescription: string
+  description: string
+  defaultValue: string | undefined
+  permissionGroups: string[]
+  handler: ChatDirectiveHandler
 }

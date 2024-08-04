@@ -38,30 +38,30 @@ export enum KMessageKind {
  * @param sn 这个字段只在s=0的时候有，与webhook已知
  */
 export interface KMessage<T> {
-  s: KMessageKind;
-  d: T;
-  sn?: number;
+  s: KMessageKind
+  d: T
+  sn?: number
 }
 
 export interface OpenGatewayProps {
-  compress: boolean;
+  compress: boolean
 
   /** 是否为断线重连 */
-  fromDisconnect: boolean;
+  fromDisconnect: boolean
 
   /** Ignored unless `fromDisconnect = true` */
-  lastProcessedSn?: number;
+  lastProcessedSn?: number
 
   /** Ignored unless `fromDisconnect = true` */
-  lastSessionId?: string;
+  lastSessionId?: string
 }
 
 export interface KHandshakeMessage {
-  session_id: string;
+  session_id: string
 }
 
 export interface KResumeAckMessage {
-  session_id: string;
+  session_id: string
 }
 
 export enum KEventType {
@@ -78,79 +78,79 @@ export enum KEventType {
 export interface KEvent<
   KExtraType extends KTextChannelExtra | KSystemEventExtra | unknown
 > {
-  channel_type: "GROUP" | "PERSON" | "BROADCAST";
-  type: KEventType;
+  channel_type: "GROUP" | "PERSON" | "BROADCAST"
+  type: KEventType
 
   /**
    * 发送目的。频道消息类时，代表的是 channel_id
    * 如果 channel_type 为 GROUP 且 type 为 System，则代表 guild_id
    */
-  target_id: string;
+  target_id: string
 
   /**
    * 发送者 id，1 代表系统
    */
-  author_id: string;
+  author_id: string
 
   /**
    * 消息内容。文件、图片、视频时，为 URL
    */
-  content: string;
+  content: string
 
-  msg_id: string;
+  msg_id: string
 
   /**
    * 消息发送时间的毫秒时间戳
    */
-  msg_timestamp: number;
+  msg_timestamp: number
 
   /**
    * 与用户消息发送 api 中传的 nonce 一致
    */
-  nonce: string;
+  nonce: string
 
-  extra: KExtraType;
+  extra: KExtraType
 }
 
 export interface KUser {
-  id: string;
-  username: string;
-  nickname: string;
-  identify_num: string;
-  online: boolean;
-  bot: boolean;
+  id: string
+  username: string
+  nickname: string
+  identify_num: string
+  online: boolean
+  bot: boolean
 
   /**
    * 状态，0/1代表正常，10代表封禁
    */
-  status: number;
+  status: number
 
   /**
    * 头像 URL
    */
-  avatar: string;
+  avatar: string
 
   /**
    * VIP 头像 URL，可能为 gif
    */
-  vip_avatar: string;
+  vip_avatar: string
 
-  mobile_verified: boolean;
-  roles: number[];
+  mobile_verified: boolean
+  roles: number[]
 }
 
 export interface KTextChannelExtra {
-  type: KEventType;
-  guild_id: string;
-  channel_name: string;
-  mention: string[];
-  mention_all: boolean;
-  mention_roles: number[];
-  mention_here: boolean;
-  author: KUser;
+  type: KEventType
+  guild_id: string
+  channel_name: string
+  mention: string[]
+  mention_all: boolean
+  mention_roles: number[]
+  mention_here: boolean
+  author: KUser
 }
 
 export interface KSystemEventExtra {
-  type: string; // TODO: 是啥
-  body: any; // TODO: 系统消息事件
+  type: string // TODO: 是啥
+  body: any // TODO: 系统消息事件
 }

@@ -6,16 +6,16 @@
  * @Description   : Magic. Don't touch.
  */
 
-import { info } from "console";
-import express from "express";
-import { main } from "./bot";
+import { info } from "console"
+import express from "express"
+import { main } from "./bot"
 
-info("Server Startup");
+info("Server Startup")
 
-const expressApp = express();
-const port = 6308;
+const expressApp = express()
+const port = 6308
 
 expressApp.listen(port, async () => {
-  await main();
-  info(`Server listening at http://localhost:${port}`);
-});
+  await main()
+  info(`Server listening at http://localhost:${port}`)
+})

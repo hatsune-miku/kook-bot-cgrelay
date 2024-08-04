@@ -1,10 +1,10 @@
-import { WhoAmIDefault } from "../mock/placeholders";
-import { WhoAmIResult } from "../utils/krequest/types";
+import { WhoAmIDefault } from "../mock/placeholders"
+import { WhoAmIResult } from "../utils/krequest/types"
 
 export interface SharedType {
-  me: WhoAmIResult;
+  me: WhoAmIResult
 }
 
 export const shared: SharedType = {
   me: WhoAmIDefault
-};
+}

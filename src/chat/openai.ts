@@ -6,11 +6,11 @@
  * @Description   : Magic. Don't touch.
  */
 
-import OpenAI from "openai";
-import { Env } from "../utils/env/env";
-import { draw } from "radash";
-import { ChatCompletionMessageParam } from "openai/resources";
-import { ContextUnit } from "./types";
+import OpenAI from "openai"
+import { Env } from "../utils/env/env"
+import { draw } from "radash"
+import { ChatCompletionMessageParam } from "openai/resources"
+import { ContextUnit } from "./types"
 
 function makeContext(
   groupChat: boolean,
@@ -21,7 +21,7 @@ function makeContext(
       role: unit.role === "user" ? "system" : "assistant",
       content:
         unit.role === "user" ? `${unit.name}说: ${unit.content}` : unit.content
-    }));
+    }))
     return [
       {
         role: "system",
@@ -29,7 +29,7 @@ function makeContext(
           "你是ChatGPT，作为某即时通讯平台的Bot，为每个用户提供简短的解答。"
       },
       ...(units as ChatCompletionMessageParam[])
-    ];
+    ]
   }
   return [
     {
@@ -37,7 +37,7 @@ function makeContext(
       content: "你是ChatGPT，作为某即时通讯平台的Bot，为用户提供简短的解答。"
     },
     ...context
-  ];
+  ]
 }
 
 export async function chatCompletionWithoutStream(
@@ -46,17 +46,17 @@ export async function chatCompletionWithoutStream(
 ): Promise<string> {
   const openai = new OpenAI({
     apiKey: draw(Env.OpenAIKeys)!
-  });
+  })
 
-  let messages = makeContext(groupChat, context);
+  let messages = makeContext(groupChat, context)
   if (messages.length > 12) {
-    messages = messages.slice(messages.length - 10);
+    messages = messages.slice(messages.length - 10)
   }
 
   const completion = await openai.chat.completions.create({
     messages: messages,
     model: "gpt-4o"
-  });
+  })
 
-  return completion.choices[0].message.content ?? "<no content>";
+  return completion.choices[0].message.content ?? "<no content>"
 }
