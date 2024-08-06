@@ -169,7 +169,7 @@ export class ChatDirectivesManager {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content:
-          "哼哼！无情开搓机器已启动，所有对话有 (spl)15%(spl) 的概率被选为幸运对话"
+          "哼哼！无情开搓机器概率UP，所有消息有 (spl)40%(spl) 的概率被选为幸运对话"
       })
       const cardMessage: KCardMessage = [
         {

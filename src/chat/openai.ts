@@ -49,9 +49,6 @@ export async function chatCompletionWithoutStream(
   })
 
   let messages = makeContext(groupChat, context)
-  if (messages.length > 12) {
-    messages = messages.slice(messages.length - 10)
-  }
 
   try {
     const completion = await openai.chat.completions.create({

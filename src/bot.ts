@@ -132,8 +132,8 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
 
   // 无情开搓模式无视其它设置
   if (directivesManager.isSuperKookModeEnabled()) {
-    // 15%
-    if (Math.random() < 0.15) {
+    // 40%
+    if (Math.random() < 0.4) {
       Requests.reactToMessage(
         event.msg_id,
         "[:dddd:3266153385602000/6dZZoQvszK034034]"
