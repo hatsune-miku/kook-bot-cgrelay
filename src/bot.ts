@@ -32,6 +32,8 @@ const contextManager = new ContextManager()
 const roleManager = new GuildRoleManager()
 const directivesManager = new ChatDirectivesManager(botEventEmitter)
 
+directivesManager.setContextManager(contextManager)
+
 export async function main() {
   ConfigUtils.initialize()
   await tryPrepareBotInformation()

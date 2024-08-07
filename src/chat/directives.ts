@@ -7,6 +7,7 @@ import { Requests } from "../utils/krequest/request"
 import { map } from "radash"
 import { extractContent } from "../utils/kevent/utils"
 import ConfigUtils from "../utils/config/config"
+import { ContextManager } from "./context-manager"
 
 export class ChatDirectivesManager {
   private userIdToProperties = new Map<string, UserProperties>()
@@ -14,6 +15,7 @@ export class ChatDirectivesManager {
   private groupChat = true
   private allowOmittingMentioningMe = false
   private superKookMode = false
+  private contextManager: ContextManager | null = null
 
   constructor(private eventEmitter: EventEmitter) {}
 
@@ -284,6 +286,21 @@ export class ChatDirectivesManager {
     })
   }
 
+  async handlePrintContext(event: ParseEventResultValid) {
+    if (!this.contextManager) {
+      return
+    }
+    const mixedContext = this.contextManager.getMixedContext(
+      event.originalEvent.extra.guild_id
+    )
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: mixedContext
+        .map((unit) => `${unit.name}说：${unit.content}`)
+        .join("\n\n")
+    })
+  }
+
   async handleHelp(event: ParseEventResultValid) {
     const directives = prepareBuiltinDirectives(this)
     const content = directives
@@ -325,6 +342,10 @@ export class ChatDirectivesManager {
 
   isSuperKookModeEnabled() {
     return this.superKookMode
+  }
+
+  setContextManager(contextManager: ContextManager) {
+    this.contextManager = contextManager
   }
 
   tryInitializeForUser(user: KUser) {
@@ -506,6 +527,14 @@ function prepareBuiltinDirectives(
       defaultValue: undefined,
       permissionGroups: ["everyone"],
       handler: manager.handleUpdateToken.bind(manager)
+    },
+    {
+      triggerWord: "print_context",
+      parameterDescription: "",
+      description: "(调试限定) 输出当前对话上下文",
+      defaultValue: undefined,
+      permissionGroups: ["developer"],
+      handler: manager.handlePrintContext.bind(manager)
     },
     {
       triggerWord: "help",

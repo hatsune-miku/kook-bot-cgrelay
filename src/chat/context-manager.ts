@@ -54,7 +54,7 @@ export class ContextManager {
 
     console.log("Pushed", displayName, content)
     if (context.length > 12) {
-      context.splice(context.length - 12)
+      context.splice(12)
     }
   }
 }
