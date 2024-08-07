@@ -113,6 +113,7 @@ export interface WhoAmIExtendResult {
   avatar: string
   vip_avatar: string
   is_vip: boolean
+  is_sys: boolean
   bot: boolean
   mobile_verified: boolean
   roles: number[]

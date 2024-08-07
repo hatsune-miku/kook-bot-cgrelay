@@ -8,6 +8,7 @@ import { map } from "radash"
 import { extractContent } from "../utils/kevent/utils"
 import ConfigUtils from "../utils/config/config"
 import { ContextManager } from "./context-manager"
+import { DateTime } from "luxon"
 
 export class ChatDirectivesManager {
   private userIdToProperties = new Map<string, UserProperties>()
@@ -211,7 +212,12 @@ export class ChatDirectivesManager {
   }
 
   async handleQuery(event: ParseEventResultValid) {
-    if (event.mentionUserIds.length === 0 && event.mentionRoleIds.length > 0) {
+    const mayBeTargetUserId = event.parameter
+    if (
+      !mayBeTargetUserId &&
+      event.mentionUserIds.length === 0 &&
+      event.mentionRoleIds.length > 0
+    ) {
       // 用户常见的错误，@到role而非具体用户
       this.respondToUser({
         originalEvent: event.originalEvent,
@@ -221,7 +227,7 @@ export class ChatDirectivesManager {
     }
 
     const userIds = event.mentionUserIds
-    if (userIds.length !== 1) {
+    if (userIds.length !== 1 && !mayBeTargetUserId) {
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "能且只能同时查询 1 位用户的信息！"
@@ -230,14 +236,18 @@ export class ChatDirectivesManager {
     }
 
     const user = await this.getUser(
-      userIds[0],
+      mayBeTargetUserId ?? userIds[0],
       event.originalEvent.extra.guild_id
     )
+
     const displayName = displayNameFromUser(user.metadata)
     const list = [
       "名字: " + displayName,
+      "昵称: " + user.metadata.nickname,
       "权限: " + user.roles.join(", "),
-      "是否为 Bot: " + (user.metadata.bot ? "是" : "不是"),
+      "Bot: " + (user.metadata.bot ? "是" : "不是"),
+      "BUFF 会员: " + (user.metadata.is_vip ? "是" : "不是"),
+      "系统账号: " + (user.metadata.is_sys ? "是" : "不是"),
       "在线状态: " + (user.metadata.online ? "在线" : "离线"),
       "封禁状态: " + (user.metadata.status === 10 ? "封禁中" : "无"),
       "手机验证: " + (user.metadata.mobile_verified ? "已验证" : "未验证")

@@ -135,6 +135,10 @@ export interface KUser {
    */
   vip_avatar: string
 
+  is_vip: boolean
+
+  is_sys: boolean
+
   mobile_verified: boolean
   roles: number[]
 }
