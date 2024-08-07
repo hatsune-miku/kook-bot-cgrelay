@@ -26,6 +26,7 @@ import { EventEmitter } from "stream"
 import { Events, KCardMessage, RespondToUserParameters } from "./events"
 import { displayNameFromUser } from "./utils"
 import ConfigUtils from "./utils/config/config"
+import { GroupChatStrategy } from "./chat/types"
 
 const botEventEmitter = new EventEmitter()
 const contextManager = new ContextManager()
@@ -130,7 +131,9 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const author = event.extra.author
   const displayName = displayNameFromUser(author)
   const isMentioningMe = isExplicitlyMentioningBot(event, shared.me.id, myRoles)
-  info(displayName, "said to me:", content)
+  const groupChatStrategy = directivesManager.getGroupChatStrategy()
+
+  info(displayName, "said:", content)
 
   // 无情开搓模式无视其它设置
   if (directivesManager.isSuperKookModeEnabled()) {
@@ -174,18 +177,20 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     }
   }
 
-  // 只有明确@我的消息才会被交给ChatGPT
-  if (!isMentioningMe) {
-    return
-  }
-
+  const shouldIncludeFreeChat = groupChatStrategy === GroupChatStrategy.Normal
   contextManager.appendToContext(
     guildId,
     author.id,
     author.nickname,
     "user",
-    content
+    content,
+    !isMentioningMe
   )
+
+  // 只有明确@我的消息才会被交给ChatGPT
+  if (!isMentioningMe) {
+    return
+  }
 
   const sendResult = await Requests.createChannelMessage({
     type: KEventType.KMarkdown,
@@ -199,10 +204,10 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     return
   }
 
-  const isGroupChat = directivesManager.isGroupChatEnabled()
+  const isGroupChat = groupChatStrategy !== GroupChatStrategy.Off
   const createdMessage = sendResult.data
   const context = isGroupChat
-    ? contextManager.getMixedContext(guildId)
+    ? contextManager.getMixedContext(guildId, shouldIncludeFreeChat)
     : contextManager.getContext(guildId, author.id)
 
   info("context", context)
@@ -215,7 +220,8 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     author.id,
     "ChatGPT",
     "assistant",
-    modelResponse
+    modelResponse,
+    false
   )
 
   const performUpdateMessage = () =>

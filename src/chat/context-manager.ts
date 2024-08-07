@@ -19,7 +19,7 @@ export class ContextManager {
     return userIdToContexts.get(userId)!
   }
 
-  getMixedContext(guildId: string): ContextUnit[] {
+  getMixedContext(guildId: string, includesFreeChat: boolean): ContextUnit[] {
     if (!this.guildIdToUserIdToContexts.has(guildId)) {
       return []
     }
@@ -27,12 +27,15 @@ export class ContextManager {
     const units: ContextUnit[] = []
     for (const context of userIdToContexts.values()) {
       for (const unit of context) {
-        units.push(unit)
+        if (!unit.freeChat || includesFreeChat) {
+          units.push(unit)
+        }
       }
     }
     units.sort((a, b) => a.timestamp - b.timestamp)
-    if (units.length > 12) {
-      return units.slice(units.length - 12)
+    const limit = includesFreeChat ? 24 : 12
+    if (units.length > limit) {
+      return units.slice(units.length - limit)
     }
     return units
   }
@@ -42,19 +45,21 @@ export class ContextManager {
     userId: string,
     displayName: string,
     role: ContextUnit["role"],
-    content: ContextUnit["content"]
+    content: ContextUnit["content"],
+    freeChat: ContextUnit["freeChat"]
   ) {
     const context = this.getContext(guildId, userId)
     context.push({
       role: role,
       name: displayName,
       content: content,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      freeChat: freeChat
     })
 
     console.log("Pushed", displayName, content)
-    if (context.length > 12) {
-      context.splice(12)
+    if (context.length > 64) {
+      context.splice(64)
     }
   }
 }

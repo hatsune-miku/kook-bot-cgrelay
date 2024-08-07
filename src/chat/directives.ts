@@ -8,12 +8,12 @@ import { map } from "radash"
 import { extractContent } from "../utils/kevent/utils"
 import ConfigUtils from "../utils/config/config"
 import { ContextManager } from "./context-manager"
-import { DateTime } from "luxon"
+import { GroupChatStrategy } from "./types"
 
 export class ChatDirectivesManager {
   private userIdToProperties = new Map<string, UserProperties>()
   private userIdToV2TokenHeaders = new Map<string, Record<string, string>>()
-  private groupChat = true
+  private groupChatStrategy: GroupChatStrategy = GroupChatStrategy.Normal
   private allowOmittingMentioningMe = false
   private superKookMode = false
   private contextManager: ContextManager | null = null
@@ -29,23 +29,29 @@ export class ChatDirectivesManager {
   }
 
   handleGroupChat(event: ParseEventResultValid) {
-    if (event.parameter === "on") {
-      this.setGroupChat(true)
+    if (event.parameter === "normal") {
+      this.setGroupChatStrategy(GroupChatStrategy.Normal)
       this.respondToUser({
         originalEvent: event.originalEvent,
-        content: "好！已启用群聊模式！"
+        content: "好欸！已启用群聊模式！"
+      })
+    } else if (event.parameter === "legacy") {
+      this.setGroupChatStrategy(GroupChatStrategy.Legacy)
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "已启用传统群聊模式！仅@我的消息会被计算。"
       })
     } else if (event.parameter === "off") {
-      this.setGroupChat(false)
+      this.setGroupChatStrategy(GroupChatStrategy.Off)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "好！已关闭群聊模式！"
       })
     } else {
-      this.setGroupChat(false)
+      this.setGroupChatStrategy(GroupChatStrategy.Off)
       this.respondToUser({
         originalEvent: event.originalEvent,
-        content: "参数不合法，应该输入 on 或者 off"
+        content: "参数不合法，应该输入 normal, legacy 或者 off"
       })
     }
   }
@@ -301,7 +307,8 @@ export class ChatDirectivesManager {
       return
     }
     const mixedContext = this.contextManager.getMixedContext(
-      event.originalEvent.extra.guild_id
+      event.originalEvent.extra.guild_id,
+      true
     )
     this.respondToUser({
       originalEvent: event.originalEvent,
@@ -330,8 +337,8 @@ export class ChatDirectivesManager {
     })
   }
 
-  setGroupChat(enabled: boolean) {
-    this.groupChat = enabled
+  setGroupChatStrategy(strategy: GroupChatStrategy) {
+    this.groupChatStrategy = strategy
   }
 
   setAllowOmittingMentioningMe(enabled: boolean) {
@@ -342,8 +349,8 @@ export class ChatDirectivesManager {
     this.superKookMode = enabled
   }
 
-  isGroupChatEnabled() {
-    return this.groupChat
+  getGroupChatStrategy(): GroupChatStrategy {
+    return this.groupChatStrategy
   }
 
   isAllowOmittingMentioningMeEnabled() {
@@ -483,10 +490,10 @@ function prepareBuiltinDirectives(
   return [
     {
       triggerWord: "groupchat",
-      parameterDescription: "on|off",
+      parameterDescription: "normal|legacy|off",
       description:
         "群聊模式，启用后，各人与机器人的对话将不再隔离。机器人能够分辨哪句话是谁说的。",
-      defaultValue: "off",
+      defaultValue: "normal",
       permissionGroups: ["admin"],
       handler: manager.handleGroupChat.bind(manager)
     },
