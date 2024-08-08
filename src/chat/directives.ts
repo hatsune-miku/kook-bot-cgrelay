@@ -3,12 +3,13 @@ import { warn } from "../utils/logging/logger"
 import { KEvent, KTextChannelExtra, KUser } from "../websocket/kwebsocket/types"
 import { Events, KCardMessage, RespondToUserParameters } from "../events"
 import { displayNameFromUser } from "../utils"
-import { Requests } from "../utils/krequest/request"
+import { RequestMethod, Requests } from "../utils/krequest/request"
 import { map } from "radash"
 import { extractContent } from "../utils/kevent/utils"
 import ConfigUtils from "../utils/config/config"
 import { ContextManager } from "./context-manager"
 import { GroupChatStrategy } from "./types"
+import { CreateChannelMessageProps } from "../utils/krequest/types"
 
 export class ChatDirectivesManager {
   private userIdToProperties = new Map<string, UserProperties>()
@@ -337,6 +338,51 @@ export class ChatDirectivesManager {
     })
   }
 
+  async handleEvalUserInput(event: ParseEventResultValid) {
+    if (!event.parameter) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "eval 内容不可为空~"
+      })
+      return
+    }
+
+    console.log(event.parameter)
+    const parameters = event.parameter.split(" ")
+    if (parameters.length < 3) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "参数解析失败~"
+      })
+      return
+    }
+
+    const method = parameters[0]
+    const endpoint = parameters[1]
+    const args = parameters.slice(2).join(" ")
+    let parsed: unknown
+
+    try {
+      parsed = JSON.parse(args)
+    } catch {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "eval 内容解析失败~"
+      })
+      return
+    }
+    const result = await Requests.request(
+      endpoint,
+      method as RequestMethod,
+      parsed as any
+    )
+
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: JSON.stringify(result)
+    })
+  }
+
   setGroupChatStrategy(strategy: GroupChatStrategy) {
     this.groupChatStrategy = strategy
   }
@@ -424,7 +470,7 @@ export class ChatDirectivesManager {
     }
 
     // Skip slash
-    const [directive, parameter] = extractedContent
+    const [directive, ...parameter] = extractedContent
       .slice(1)
       .split(" ")
       .filter((part) => part.trim() !== "")
@@ -438,7 +484,7 @@ export class ChatDirectivesManager {
     return {
       shouldIntercept: true,
       directive: directive,
-      parameter: parameter,
+      parameter: parameter.join(" "),
       mentionRoleIds: event.extra.mention_roles,
       mentionUserIds: event.extra.mention,
       originalEvent: event,
@@ -560,6 +606,14 @@ function prepareBuiltinDirectives(
       defaultValue: undefined,
       permissionGroups: ["everyone"],
       handler: manager.handleHelp.bind(manager)
+    },
+    {
+      triggerWord: "eval",
+      parameterDescription: "<method> <endpoint> <...data>",
+      description: "使用你给定的 JSON 数据，以我的名义调用接口，十分很危险",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleEvalUserInput.bind(manager)
     }
   ]
 }
