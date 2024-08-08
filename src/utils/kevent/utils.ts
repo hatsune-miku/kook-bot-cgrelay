@@ -26,4 +26,6 @@ export function removingKMarkdownLabels(content: string, labels: string[]) {
 
 export function extractContent(event: KEvent<KTextChannelExtra>) {
   return removingKMarkdownLabels(event.content, ["rol", "met"])
+    .replace(new RegExp(String.raw`\\\(`, "g"), "(")
+    .replace(new RegExp(String.raw`\\\)`, "g"), ")")
 }
