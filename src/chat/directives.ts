@@ -8,7 +8,7 @@ import { map } from "radash"
 import { extractContent } from "../utils/kevent/utils"
 import ConfigUtils from "../utils/config/config"
 import { ContextManager } from "./context-manager"
-import { GroupChatStrategy } from "./types"
+import { ChatBotBackend, GroupChatStrategy } from "./types"
 import { CreateChannelMessageProps } from "../utils/krequest/types"
 
 export class ChatDirectivesManager {
@@ -18,6 +18,7 @@ export class ChatDirectivesManager {
   private allowOmittingMentioningMe = false
   private superKookMode = false
   private contextManager: ContextManager | null = null
+  private chatBotBackend: ChatBotBackend = ChatBotBackend.ChatGPT
 
   constructor(private eventEmitter: EventEmitter) {}
 
@@ -383,6 +384,30 @@ export class ChatDirectivesManager {
     })
   }
 
+  async handleSwitchAIBackend(event: ParseEventResultValid) {
+    const backend = event.parameter
+    if (backend === ChatBotBackend.ChatGPT) {
+      this.chatBotBackend = ChatBotBackend.ChatGPT
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "已切换至 ChatGPT (gpt-4o)"
+      })
+    } else if (backend === ChatBotBackend.Ernie) {
+      this.chatBotBackend = ChatBotBackend.Ernie
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "已切换至文心一言 (ERNIE-4.0-Turbo-8K)"
+      })
+    } else {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content:
+          "参数不合法，应该输入 chatgpt 或者 ernie. 当前: " +
+          this.chatBotBackend
+      })
+    }
+  }
+
   setGroupChatStrategy(strategy: GroupChatStrategy) {
     this.groupChatStrategy = strategy
   }
@@ -393,6 +418,10 @@ export class ChatDirectivesManager {
 
   setSuperKookMode(enabled: boolean) {
     this.superKookMode = enabled
+  }
+
+  getChatBotBackend(): ChatBotBackend {
+    return this.chatBotBackend
   }
 
   getGroupChatStrategy(): GroupChatStrategy {
@@ -614,6 +643,14 @@ function prepareBuiltinDirectives(
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleEvalUserInput.bind(manager)
+    },
+    {
+      triggerWord: "set_backend",
+      parameterDescription: "chatgpt|ernie",
+      description: "更换 AI 实现，可选范围：chatgpt, ernie",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleSwitchAIBackend.bind(manager)
     }
   ]
 }

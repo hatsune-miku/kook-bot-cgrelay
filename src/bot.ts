@@ -7,7 +7,8 @@
  */
 
 import { ContextManager } from "./chat/context-manager"
-import { chatCompletionWithoutStream } from "./chat/openai"
+import { chatCompletionWithoutStream as chatCompletionWithoutStreamChatGPT } from "./chat/openai"
+import { chatCompletionWithoutStream as chatCompletionWithoutStreamErnie } from "./chat/ernie"
 import { ChatDirectivesManager } from "./chat/directives"
 import { shared } from "./global/shared"
 import { extractContent, isExplicitlyMentioningBot } from "./utils/kevent/utils"
@@ -26,7 +27,7 @@ import { EventEmitter } from "stream"
 import { Events, KCardMessage, RespondToUserParameters } from "./events"
 import { displayNameFromUser } from "./utils"
 import ConfigUtils from "./utils/config/config"
-import { GroupChatStrategy } from "./chat/types"
+import { ChatBotBackend, GroupChatStrategy } from "./chat/types"
 
 const botEventEmitter = new EventEmitter()
 const contextManager = new ContextManager()
@@ -212,7 +213,11 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
 
   info("context", context)
 
-  const modelResponse = await chatCompletionWithoutStream(isGroupChat, context)
+  const backend =
+    directivesManager.getChatBotBackend() === ChatBotBackend.ChatGPT
+      ? chatCompletionWithoutStreamChatGPT
+      : chatCompletionWithoutStreamErnie
+  const modelResponse = await backend(isGroupChat, context)
 
   info("model response", modelResponse)
   contextManager.appendToContext(

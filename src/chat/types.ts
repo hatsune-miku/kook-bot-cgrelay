@@ -11,3 +11,8 @@ export enum GroupChatStrategy {
   Legacy = "legacy",
   Normal = "normal"
 }
+
+export enum ChatBotBackend {
+  ChatGPT = "chatgpt",
+  Ernie = "ernie"
+}
