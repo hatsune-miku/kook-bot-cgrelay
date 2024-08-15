@@ -8,6 +8,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@baiducloud/qianfan": "^0.1.7",
     "@types/express": "^4.17.21",
     "@types/luxon": "^3.4.2",
     "@types/pako": "^2.0.3",
