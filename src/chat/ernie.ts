@@ -37,10 +37,9 @@ function makeContext(
 
   if (context.length % 2 === 0) {
     // 文心一言要求奇数个对话
-    context.push({
-      role: "user",
-      content: "请解答用户提问",
-      name: "system"
+    context.unshift({
+      role: "assistant",
+      content: "你好，我是文心一言。"
     } as ContextUnit)
   }
 
