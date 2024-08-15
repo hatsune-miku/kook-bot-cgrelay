@@ -8,10 +8,33 @@ setEnvVariable("QIANFAN_SECRET_KEY", Env.ErnieSecretKey)
 
 const client = new ChatCompletion()
 
+function mergeUserQuestions(context: ContextUnit[]): ContextUnit[] {
+  const mergedContext = [...context]
+  for (let i = 0; i < mergedContext.length - 1; i++) {
+    if (
+      mergedContext[i].role === "user" &&
+      mergedContext[i + 1].role === "user"
+    ) {
+      mergedContext[
+        i
+      ].content = `${mergedContext[i].name}说：${mergedContext[i].content}`
+      mergedContext[i].content += `\n${mergedContext[i + 1].name}说：${
+        mergedContext[i + 1].content
+      }`
+      mergedContext[i].name = "system"
+      mergedContext.splice(i + 1, 1)
+    }
+  }
+  return mergedContext
+}
+
 function makeContext(
   groupChat: boolean,
   context: ContextUnit[]
 ): ChatCompletionMessageParam[] {
+  // 文心一言只支持一问一答
+  context = mergeUserQuestions(context)
+
   if (context.length % 2 === 0) {
     // 文心一言要求奇数个对话
     context.push({
