@@ -223,7 +223,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   contextManager.appendToContext(
     guildId,
     author.id,
-    "ChatGPT",
+    directivesManager.getChatBotBackend(),
     "assistant",
     modelResponse,
     false
