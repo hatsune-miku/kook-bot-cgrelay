@@ -1,5 +1,5 @@
 import { EventEmitter } from "stream"
-import { warn } from "../utils/logging/logger"
+import { info, warn } from "../utils/logging/logger"
 import { KEvent, KTextChannelExtra, KUser } from "../websocket/kwebsocket/types"
 import { Events, KCardMessage, RespondToUserParameters } from "../events"
 import { displayNameFromUser } from "../utils"
@@ -8,8 +8,9 @@ import { map } from "radash"
 import { extractContent } from "../utils/kevent/utils"
 import ConfigUtils from "../utils/config/config"
 import { ContextManager } from "./context-manager"
-import { ChatBotBackend, GroupChatStrategy } from "./types"
+import { ChatBotBackend, ContextUnit, GroupChatStrategy } from "./types"
 import { CreateChannelMessageProps } from "../utils/krequest/types"
+import { exit } from "process"
 
 export class ChatDirectivesManager {
   private userIdToProperties = new Map<string, UserProperties>()
@@ -408,6 +409,62 @@ export class ChatDirectivesManager {
     }
   }
 
+  async handleSetContext(event: ParseEventResultValid) {
+    if (!event.parameter) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "context 不能为空~"
+      })
+      return
+    }
+
+    info("received user-defined context", event.parameter)
+
+    if (event.parameter.startsWith("[http")) {
+      event.parameter = event.parameter.slice(1, event.parameter.indexOf("]"))
+    }
+
+    if (event.parameter.startsWith("http")) {
+      try {
+        event.parameter = await (await fetch(event.parameter)).text()
+
+        if (!event.parameter) {
+          this.respondToUser({
+            originalEvent: event.originalEvent,
+            content: "context 内容为空~"
+          })
+          return
+        }
+      } catch {
+        this.respondToUser({
+          originalEvent: event.originalEvent,
+          content: "context 下载失败~"
+        })
+        return
+      }
+    }
+
+    try {
+      const decoded = Buffer.from(event.parameter, "base64").toString("utf-8")
+      const context = JSON.parse(decoded) as ContextUnit[]
+      this.contextManager?.setContext(
+        event.originalEvent.extra.guild_id,
+        event.userProperties.metadata.id,
+        context
+      )
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: `已设置对话上下文，共 ${context.length} 条对话`
+      })
+      this.handlePrintContext(event)
+    } catch (e) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "context 解析失败~"
+      })
+    }
+  }
+
   setGroupChatStrategy(strategy: GroupChatStrategy) {
     this.groupChatStrategy = strategy
   }
@@ -651,6 +708,14 @@ function prepareBuiltinDirectives(
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleSwitchAIBackend.bind(manager)
+    },
+    {
+      triggerWord: "set_context",
+      parameterDescription: "<context>",
+      description: "设置对话上下文",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleSetContext.bind(manager)
     }
   ]
 }

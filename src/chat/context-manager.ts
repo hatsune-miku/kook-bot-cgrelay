@@ -1,10 +1,15 @@
-import { ContextUnit } from "./types"
+import ConfigUtils from "../utils/config/config"
+import { ContextUnit, GuildIdToUserIdToContexts } from "./types"
 
 export class ContextManager {
-  private guildIdToUserIdToContexts = new Map<
+  private guildIdToUserIdToContexts: GuildIdToUserIdToContexts = new Map<
     string,
     Map<string, ContextUnit[]>
   >()
+
+  constructor() {
+    this.guildIdToUserIdToContexts = ConfigUtils.getGuildIdToUserIdToContexts()
+  }
 
   getContext(guildId: string, userId: string): ContextUnit[] {
     if (!this.guildIdToUserIdToContexts.has(guildId)) {
@@ -20,6 +25,7 @@ export class ContextManager {
   }
 
   getMixedContext(guildId: string, includesFreeChat: boolean): ContextUnit[] {
+    console.log("Getting mixed context", this.guildIdToUserIdToContexts)
     if (!this.guildIdToUserIdToContexts.has(guildId)) {
       return []
     }
@@ -61,5 +67,13 @@ export class ContextManager {
     if (context.length > 64) {
       context.splice(64)
     }
+
+    ConfigUtils.setGuildIdToUserIdToContexts(this.guildIdToUserIdToContexts)
+  }
+
+  setContext(guildId: string, userId: string, context: ContextUnit[]) {
+    this.guildIdToUserIdToContexts.get(guildId)?.clear()
+    this.guildIdToUserIdToContexts.get(guildId)?.set(userId, context)
+    ConfigUtils.setGuildIdToUserIdToContexts(this.guildIdToUserIdToContexts)
   }
 }

@@ -1,5 +1,11 @@
 import { readFileSync, writeFileSync } from "fs"
-import { get } from "radash"
+import { get, set } from "radash"
+import {
+  ContextUnit,
+  GuildIdToUserIdToContexts,
+  GuildIdToUserIdToContextsData
+} from "../../chat/types"
+import { exit } from "process"
 
 export default class ConfigUtils {
   static config?: Config
@@ -10,6 +16,7 @@ export default class ConfigUtils {
         encoding: "utf-8"
       })
       ConfigUtils.config = JSON.parse(configRaw)
+      console.log("Loaded user config.", ConfigUtils.config)
     } catch (e) {
       ConfigUtils.config = {}
     }
@@ -37,6 +44,48 @@ export default class ConfigUtils {
     }
     ConfigUtils.persist()
   }
+
+  static getGuildIdToUserIdToContexts(): GuildIdToUserIdToContexts {
+    const data = ConfigUtils.config?.guildIdToUserIdToContexts ?? {}
+    const guildIdToUserIdToContexts = new Map<
+      string,
+      Map<string, ContextUnit[]>
+    >()
+    const guildIds = Object.keys(data)
+
+    for (const guildId of guildIds) {
+      const userIdToContexts = data[guildId]
+      const userIdToContext = new Map<string, ContextUnit[]>()
+      const userIds = Object.keys(userIdToContexts)
+
+      for (const userId of userIds) {
+        userIdToContext.set(userId, userIdToContexts[userId])
+      }
+
+      guildIdToUserIdToContexts.set(guildId, userIdToContext)
+    }
+    return guildIdToUserIdToContexts
+  }
+
+  static setGuildIdToUserIdToContexts(
+    guildIdToUserIdToContexts: GuildIdToUserIdToContexts
+  ) {
+    const data: GuildIdToUserIdToContextsData = {}
+    const guildIds = guildIdToUserIdToContexts.keys()
+    for (const guildId of guildIds) {
+      data[guildId] = {}
+
+      const userIdToContext = guildIdToUserIdToContexts.get(guildId)!
+      const userIds = userIdToContext.keys()
+
+      for (const userId of userIds) {
+        data[guildId][userId] = userIdToContext.get(userId)!
+      }
+    }
+    ConfigUtils.config ??= {}
+    ConfigUtils.config.guildIdToUserIdToContexts = data
+    ConfigUtils.persist()
+  }
 }
 
 export interface UserConfig {
@@ -47,4 +96,5 @@ export interface Config {
   user?: {
     [userId: string]: UserConfig | undefined
   }
+  guildIdToUserIdToContexts?: GuildIdToUserIdToContextsData
 }

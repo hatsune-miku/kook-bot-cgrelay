@@ -24,10 +24,12 @@ import {
   KTextChannelExtra
 } from "./websocket/kwebsocket/types"
 import { EventEmitter } from "stream"
-import { Events, KCardMessage, RespondToUserParameters } from "./events"
+import { Events, RespondToUserParameters } from "./events"
 import { displayNameFromUser } from "./utils"
 import ConfigUtils from "./utils/config/config"
 import { ChatBotBackend, GroupChatStrategy } from "./chat/types"
+
+ConfigUtils.initialize()
 
 const botEventEmitter = new EventEmitter()
 const contextManager = new ContextManager()
@@ -37,7 +39,6 @@ const directivesManager = new ChatDirectivesManager(botEventEmitter)
 directivesManager.setContextManager(contextManager)
 
 export async function main() {
-  ConfigUtils.initialize()
   await tryPrepareBotInformation()
 
   const helper = new KWSHelper({
