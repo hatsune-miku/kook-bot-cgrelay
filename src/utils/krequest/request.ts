@@ -150,12 +150,26 @@ export class Requests {
   ): Promise<KResponseExt<CreateChannelMessageResult>> {
     const chunks = Math.ceil(props.content.length / MessageLengthUpperBound)
     let ret: KResponseExt<CreateChannelMessageResult> | null = null
+    let shouldPrependMarkdownMark = false
 
     for (let i = 0; i < chunks; ++i) {
-      const chunk = props.content.slice(
+      let chunk = props.content.slice(
         i * MessageLengthUpperBound,
         (i + 1) * MessageLengthUpperBound
       )
+
+      if (shouldPrependMarkdownMark) {
+        chunk = "```" + chunk
+        shouldPrependMarkdownMark = false
+      }
+
+      // 有奇数个 ``` 标记
+      const markdownMarkCount = (chunk.match(/```/g) ?? []).length
+      if (markdownMarkCount % 2 !== 0) {
+        chunk += "```"
+        shouldPrependMarkdownMark = true
+      }
+
       ret = await this.request(`/api/v3/message/create`, "POST", {
         ...props,
         content: `(${i + 1}/${chunks}) ${chunk}`
