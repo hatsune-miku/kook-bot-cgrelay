@@ -74,6 +74,10 @@ export interface EditChannelMessageProps {
   content: string
   quote?: string
   temp_target_id?: string
+  extra: {
+    type: KEventType
+    target_id: string
+  }
 }
 
 export interface CreateChannelMessageResult {

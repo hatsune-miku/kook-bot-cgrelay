@@ -24,6 +24,8 @@ import { OpenGatewayProps } from "../../websocket/kwebsocket/types"
 import { Env } from "../env/env"
 import { DateTime } from "luxon"
 import { die } from "../server/die"
+import { MessageLengthUpperBound } from "../config/config"
+import { sleep } from "radash"
 
 export const BASE_URL = "https://www.kookapp.cn"
 export const AUTHORIZATION = `Bot ${Env.BotToken}`
@@ -143,15 +145,42 @@ export class Requests {
     })
   }
 
+  static async createChannelMessageChunk(
+    props: CreateChannelMessageProps
+  ): Promise<KResponseExt<CreateChannelMessageResult>> {
+    const chunks = Math.ceil(props.content.length / MessageLengthUpperBound)
+    let ret: KResponseExt<CreateChannelMessageResult> | null = null
+
+    for (let i = 0; i < chunks; i += MessageLengthUpperBound) {
+      const chunk = props.content.slice(i, MessageLengthUpperBound)
+      ret = await this.createChannelMessage({
+        ...props,
+        content: `(${i + 1}/${chunks}) ${chunk}`
+      })
+      await sleep(100)
+    }
+    return ret!
+  }
+
   static async createChannelMessage(
     props: CreateChannelMessageProps
   ): Promise<KResponseExt<CreateChannelMessageResult>> {
+    if (props.content.length > MessageLengthUpperBound) {
+      return this.createChannelMessageChunk(props)
+    }
     return this.request(`/api/v3/message/create`, "POST", props)
   }
 
   static async updateChannelMessage(
     props: EditChannelMessageProps
   ): Promise<KResponseExt<{}>> {
+    if (props.content.length > MessageLengthUpperBound) {
+      return this.createChannelMessageChunk({
+        type: props.extra.type,
+        target_id: props.extra.target_id,
+        ...props
+      })
+    }
     return this.request(`/api/v3/message/update`, "POST", props)
   }
 

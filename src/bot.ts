@@ -228,7 +228,11 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
       content: modelResponse,
-      quote: event.msg_id
+      quote: event.msg_id,
+      extra: {
+        type: KEventType.KMarkdown,
+        target_id: event.target_id
+      }
     })
 
   const updateResult = await performUpdateMessage()

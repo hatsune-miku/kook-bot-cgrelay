@@ -1,10 +1,12 @@
 import { readFileSync, writeFileSync } from "fs"
-import { get, set } from "radash"
+import { get } from "radash"
 import {
   ContextUnit,
   GuildIdToUserIdToContexts,
   GuildIdToUserIdToContextsData
 } from "../../chat/types"
+
+export const MessageLengthUpperBound = Math.round(4000 * 0.9)
 
 export const WhitelistedGuildIds: Record<string, string> = {
   "3266153385602000": "小分队",
