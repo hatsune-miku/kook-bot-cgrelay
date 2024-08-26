@@ -316,7 +316,7 @@ export class ChatDirectivesManager {
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: mixedContext
-        .map((unit) => `${unit.name}说：${unit.content}`)
+        .map((unit) => `${unit.name}说：${unit.content.slice(0, 16) + "..."}`)
         .join("\n\n")
     })
   }
@@ -463,6 +463,11 @@ export class ChatDirectivesManager {
         content: "context 解析失败~"
       })
     }
+  }
+
+  async handleObliviate(event: ParseEventResultValid) {
+    const guildId = event.originalEvent.extra.guild_id
+    this.contextManager?.removeContext(guildId)
   }
 
   setGroupChatStrategy(strategy: GroupChatStrategy) {
@@ -716,6 +721,14 @@ function prepareBuiltinDirectives(
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleSetContext.bind(manager)
+    },
+    {
+      triggerWord: "obliviate",
+      parameterDescription: "",
+      description: "遗忘当前服务器对应的上下文",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleObliviate.bind(manager)
     }
   ]
 }

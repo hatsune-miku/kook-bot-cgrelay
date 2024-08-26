@@ -76,4 +76,9 @@ export class ContextManager {
     this.guildIdToUserIdToContexts.get(guildId)?.set(userId, context)
     ConfigUtils.setGuildIdToUserIdToContexts(this.guildIdToUserIdToContexts)
   }
+
+  removeContext(guildId: string) {
+    this.guildIdToUserIdToContexts.get(guildId)?.clear()
+    ConfigUtils.setGuildIdToUserIdToContexts(this.guildIdToUserIdToContexts)
+  }
 }
