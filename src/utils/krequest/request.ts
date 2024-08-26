@@ -159,14 +159,14 @@ export class Requests {
       )
 
       if (shouldPrependMarkdownMark) {
-        chunk = "```\n" + chunk
+        chunk = "\n```\n" + chunk
         shouldPrependMarkdownMark = false
       }
 
       // 有奇数个 ``` 标记
       const markdownMarkCount = (chunk.match(/```/g) ?? []).length
       if (markdownMarkCount % 2 !== 0) {
-        chunk += "\n```"
+        chunk += "\n```\n"
         shouldPrependMarkdownMark = true
       }
 

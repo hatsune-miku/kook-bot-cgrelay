@@ -14,7 +14,8 @@ export const WhitelistedGuildIds: Record<string, string> = {
   "3340148861735314": "HL",
   "4499354561413658": "saa",
   "8624952735398189": "a1knla",
-  "7760397450327014": "sand"
+  "7760397450327014": "sand",
+  "2140636354287494": "会员制餐厅"
 }
 
 export default class ConfigUtils {
