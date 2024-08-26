@@ -153,7 +153,7 @@ export class Requests {
 
     for (let i = 0; i < chunks; i += MessageLengthUpperBound) {
       const chunk = props.content.slice(i, i + MessageLengthUpperBound)
-      ret = await this.createChannelMessage({
+      ret = await this.request(`/api/v3/message/create`, "POST", {
         ...props,
         content: `(${i + 1}/${chunks}) ${chunk}`
       })
