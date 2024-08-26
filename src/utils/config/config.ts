@@ -5,7 +5,15 @@ import {
   GuildIdToUserIdToContexts,
   GuildIdToUserIdToContextsData
 } from "../../chat/types"
-import { exit } from "process"
+
+export const WhitelistedGuildIds: Record<string, string> = {
+  "3266153385602000": "小分队",
+  "9705615544844948": "water",
+  "3340148861735314": "HL",
+  "4499354561413658": "saa",
+  "8624952735398189": "a1knla",
+  "7760397450327014": "sand"
+}
 
 export default class ConfigUtils {
   static config?: Config
@@ -85,6 +93,10 @@ export default class ConfigUtils {
     ConfigUtils.config ??= {}
     ConfigUtils.config.guildIdToUserIdToContexts = data
     ConfigUtils.persist()
+  }
+
+  static getWhitelistedGuildReferenceName(guildId: string): string | undefined {
+    return WhitelistedGuildIds[guildId]
   }
 }
 

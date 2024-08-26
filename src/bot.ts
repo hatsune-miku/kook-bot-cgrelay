@@ -128,35 +128,25 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   if (isSentByMe) {
     return
   }
-
   const content = extractContent(event)
   const author = event.extra.author
   const displayName = displayNameFromUser(author)
   const isMentioningMe = isExplicitlyMentioningBot(event, shared.me.id, myRoles)
   const groupChatStrategy = directivesManager.getGroupChatStrategy()
+  const guildReferenceName =
+    ConfigUtils.getWhitelistedGuildReferenceName(guildId)
+
+  if (isMentioningMe && !guildReferenceName) {
+    await Requests.createChannelMessage({
+      type: KEventType.KMarkdown,
+      target_id: event.target_id,
+      content: `miku 机器人还在内测中，当前服务器未在白名单。有意请联系 (met)3553226959(met)~`,
+      quote: event.msg_id
+    })
+    return
+  }
 
   info(displayName, "said:", content)
-
-  // 无情开搓模式无视其它设置
-  if (directivesManager.isSuperKookModeEnabled()) {
-    // 40%
-    if (Math.random() < 0.4) {
-      Requests.reactToMessage(
-        event.msg_id,
-        "[:dddd:3266153385602000/6dZZoQvszK034034]"
-      ).then((res) => {
-        info(res)
-        if (!res.success) {
-          error(
-            "Failed to react to message",
-            event.msg_id,
-            "reason:",
-            res.message
-          )
-        }
-      })
-    }
-  }
 
   // @我或者可以免除@我，都可以处理指令
   if (
@@ -167,6 +157,10 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     directivesManager.tryInitializeForUser(author)
     const parsedEvent = await directivesManager.tryParseEvent(content, event)
     if (parsedEvent.shouldIntercept) {
+      if (!guildReferenceName) {
+        return
+      }
+
       info("It's a directive. Processing...")
       parsedEvent.mentionUserIds = parsedEvent.mentionUserIds.filter(
         (id) => id !== shared.me.id
