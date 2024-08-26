@@ -236,7 +236,6 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     })
 
   const updateResult = await performUpdateMessage()
-  setTimeout(performUpdateMessage, 3000)
 
   if (!updateResult.success) {
     error(
