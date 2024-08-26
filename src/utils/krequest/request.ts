@@ -151,8 +151,11 @@ export class Requests {
     const chunks = Math.ceil(props.content.length / MessageLengthUpperBound)
     let ret: KResponseExt<CreateChannelMessageResult> | null = null
 
-    for (let i = 0; i < chunks; i += MessageLengthUpperBound) {
-      const chunk = props.content.slice(i, i + MessageLengthUpperBound)
+    for (let i = 0; i < chunks; ++i) {
+      const chunk = props.content.slice(
+        i * MessageLengthUpperBound,
+        (i + 1) * MessageLengthUpperBound
+      )
       ret = await this.request(`/api/v3/message/create`, "POST", {
         ...props,
         content: `(${i + 1}/${chunks}) ${chunk}`
