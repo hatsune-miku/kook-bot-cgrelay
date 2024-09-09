@@ -42,7 +42,8 @@ function makeContext(
 
 export async function chatCompletionWithoutStream(
   groupChat: boolean,
-  context: ContextUnit[]
+  context: ContextUnit[],
+  model: string
 ): Promise<string> {
   const openai = new OpenAI({
     apiKey: draw(Env.OpenAIKeys)!
@@ -53,7 +54,7 @@ export async function chatCompletionWithoutStream(
   try {
     const completion = await openai.chat.completions.create({
       messages: messages,
-      model: "gpt-4o"
+      model: model
     })
 
     return completion.choices[0].message.content ?? "<no content>"

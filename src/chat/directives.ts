@@ -19,7 +19,8 @@ export class ChatDirectivesManager {
   private allowOmittingMentioningMe = false
   private superKookMode = false
   private contextManager: ContextManager | null = null
-  private chatBotBackend: ChatBotBackend = ChatBotBackend.ChatGPT
+  private chatBotBackend: ChatBotBackend = ChatBotBackend.GPT4o
+  private shouldShowModelName = false
 
   constructor(private eventEmitter: EventEmitter) {}
 
@@ -387,11 +388,17 @@ export class ChatDirectivesManager {
 
   async handleSwitchAIBackend(event: ParseEventResultValid) {
     const backend = event.parameter
-    if (backend === ChatBotBackend.ChatGPT) {
-      this.chatBotBackend = ChatBotBackend.ChatGPT
+    if (
+      [
+        ChatBotBackend.GPT4,
+        ChatBotBackend.GPT4o,
+        ChatBotBackend.GPT4Turbo
+      ].includes(backend as ChatBotBackend)
+    ) {
+      this.chatBotBackend = backend as ChatBotBackend
       this.respondToUser({
         originalEvent: event.originalEvent,
-        content: "已切换至 ChatGPT (gpt-4o)"
+        content: `已切换至 ChatGPT (${backend})`
       })
     } else if (backend === ChatBotBackend.Ernie) {
       this.chatBotBackend = ChatBotBackend.Ernie
@@ -470,6 +477,27 @@ export class ChatDirectivesManager {
     this.contextManager?.removeContext(guildId)
   }
 
+  async handleSetShowModelName(event: ParseEventResultValid) {
+    if (event.parameter === "on") {
+      this.shouldShowModelName = true
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "已开启在回复中显示模型名称"
+      })
+    } else if (event.parameter === "off") {
+      this.shouldShowModelName = false
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "已关闭在回复中显示模型名称"
+      })
+    } else {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "参数不合法，应该输入 on 或者 off"
+      })
+    }
+  }
+
   setGroupChatStrategy(strategy: GroupChatStrategy) {
     this.groupChatStrategy = strategy
   }
@@ -488,6 +516,10 @@ export class ChatDirectivesManager {
 
   getGroupChatStrategy(): GroupChatStrategy {
     return this.groupChatStrategy
+  }
+
+  getShouldShowModelName(): boolean {
+    return this.shouldShowModelName
   }
 
   isAllowOmittingMentioningMeEnabled() {
@@ -729,6 +761,14 @@ function prepareBuiltinDirectives(
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleObliviate.bind(manager)
+    },
+    {
+      triggerWord: "set_show_model_name",
+      parameterDescription: "on|off",
+      description: "开启或关闭在回复中显示模型名称",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleSetShowModelName.bind(manager)
     }
   ]
 }

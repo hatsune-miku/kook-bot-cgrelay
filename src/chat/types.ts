@@ -13,7 +13,9 @@ export enum GroupChatStrategy {
 }
 
 export enum ChatBotBackend {
-  ChatGPT = "chatgpt",
+  GPT4o = "gpt-4o",
+  GPT4Turbo = "gpt-4-turbo",
+  GPT4 = "gpt-4",
   Ernie = "ernie"
 }
 

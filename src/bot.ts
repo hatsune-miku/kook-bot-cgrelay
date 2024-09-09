@@ -27,7 +27,7 @@ import { EventEmitter } from "stream"
 import { Events, RespondToUserParameters } from "./events"
 import { displayNameFromUser } from "./utils"
 import ConfigUtils from "./utils/config/config"
-import { ChatBotBackend, GroupChatStrategy } from "./chat/types"
+import { ChatBotBackend, ContextUnit, GroupChatStrategy } from "./chat/types"
 
 ConfigUtils.initialize()
 
@@ -208,26 +208,36 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
 
   info("context", context)
 
+  const backendModelName = directivesManager.getChatBotBackend()
   const backend =
-    directivesManager.getChatBotBackend() === ChatBotBackend.ChatGPT
-      ? chatCompletionWithoutStreamChatGPT
-      : chatCompletionWithoutStreamErnie
+    directivesManager.getChatBotBackend() === ChatBotBackend.Ernie
+      ? chatCompletionWithoutStreamErnie
+      : (groupChat: boolean, context: ContextUnit[]) =>
+          chatCompletionWithoutStreamChatGPT(
+            groupChat,
+            context,
+            backendModelName
+          )
   const modelResponse = await backend(isGroupChat, context)
 
   info("model response", modelResponse)
   contextManager.appendToContext(
     guildId,
     author.id,
-    directivesManager.getChatBotBackend(),
+    backendModelName,
     "assistant",
     modelResponse,
     false
   )
 
+  const contentRepliedToUser = directivesManager.getShouldShowModelName()
+    ? `(${backendModelName}) ${modelResponse}`
+    : modelResponse
+
   const performUpdateMessage = () =>
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
-      content: modelResponse,
+      content: contentRepliedToUser,
       quote: event.msg_id,
       extra: {
         type: KEventType.KMarkdown,
