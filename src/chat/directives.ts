@@ -409,9 +409,9 @@ export class ChatDirectivesManager {
     } else {
       this.respondToUser({
         originalEvent: event.originalEvent,
-        content:
-          "参数不合法，应该输入 chatgpt 或者 ernie. 当前: " +
-          this.chatBotBackend
+        content: `当前模型: ${this.chatBotBackend}，可选: ${Object.values(
+          ChatBotBackend
+        ).join(", ")}`
       })
     }
   }
