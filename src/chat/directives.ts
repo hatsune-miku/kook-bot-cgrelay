@@ -740,8 +740,10 @@ function prepareBuiltinDirectives(
     },
     {
       triggerWord: "set_backend",
-      parameterDescription: "chatgpt|ernie",
-      description: "更换 AI 实现，可选范围：chatgpt, ernie",
+      parameterDescription: Object.values(ChatBotBackend).join("|"),
+      description: `更换 AI 实现，可选范围：${Object.values(
+        ChatBotBackend
+      ).join(", ")}`,
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleSwitchAIBackend.bind(manager)
