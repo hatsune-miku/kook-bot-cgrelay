@@ -392,7 +392,9 @@ export class ChatDirectivesManager {
       [
         ChatBotBackend.GPT4,
         ChatBotBackend.GPT4o,
-        ChatBotBackend.GPT4Turbo
+        ChatBotBackend.GPT4Turbo,
+        ChatBotBackend.GPT4o2024,
+        ChatBotBackend.GPT4Turbo2024
       ].includes(backend as ChatBotBackend)
     ) {
       this.chatBotBackend = backend as ChatBotBackend
