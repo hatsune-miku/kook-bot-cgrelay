@@ -140,7 +140,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     await Requests.createChannelMessage({
       type: KEventType.KMarkdown,
       target_id: event.target_id,
-      content: `miku 机器人还在内测中，当前服务器未在白名单。有意请联系 (met)3553226959(met)~`,
+      content: `miku 机器人还在内测中，当前服务器 (${guildId}) 未在白名单。有意请联系 (met)3553226959(met)~`,
       quote: event.msg_id
     })
     return
