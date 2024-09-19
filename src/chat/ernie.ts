@@ -43,14 +43,13 @@ function makeContext(
 ): ChatCompletionMessageParam[] {
   context.unshift({
     role: "user",
-    content: "你是文心一言，请根据以下群聊情景回答用户的问题。",
+    content:
+      "你是文心一言。请你作为通讯平台KOOK的群聊的一员，参与大家的讨论。请总是给对话的最后一条以适当关注，那可能是用户对你的提问。",
     name: "system"
   } as ContextUnit)
 
   // 文心一言只支持一问一答
   context = mergeUserQuestions(context)
-
-  info(context)
 
   if (groupChat) {
     const units = context.map((unit) => ({

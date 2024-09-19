@@ -1,37 +1,28 @@
 import ConfigUtils from "../utils/config/config"
-import { ContextUnit, GuildIdToUserIdToContexts } from "./types"
+import { ContextUnit } from "./types"
 
 export class ContextManager {
-  private guildIdToUserIdToContexts: GuildIdToUserIdToContexts = new Map<
-    string,
-    Map<string, ContextUnit[]>
-  >()
-
-  constructor() {
-    this.guildIdToUserIdToContexts = ConfigUtils.getGuildIdToUserIdToContexts()
+  getContext(
+    guildId: string,
+    channelId: string,
+    userId: string
+  ): ContextUnit[] {
+    const channelConfig = ConfigUtils.getChannelConfig(guildId, channelId)
+    channelConfig.userIdToContextUnits ??= {}
+    return channelConfig.userIdToContextUnits?.[userId] ?? []
   }
 
-  getContext(guildId: string, userId: string): ContextUnit[] {
-    if (!this.guildIdToUserIdToContexts.has(guildId)) {
-      this.guildIdToUserIdToContexts.set(guildId, new Map())
-    }
-
-    const userIdToContexts = this.guildIdToUserIdToContexts.get(guildId)!
-    if (!userIdToContexts.has(userId)) {
-      userIdToContexts.set(userId, [])
-    }
-
-    return userIdToContexts.get(userId)!
-  }
-
-  getMixedContext(guildId: string, includesFreeChat: boolean): ContextUnit[] {
-    console.log("Getting mixed context", this.guildIdToUserIdToContexts)
-    if (!this.guildIdToUserIdToContexts.has(guildId)) {
-      return []
-    }
-    const userIdToContexts = this.guildIdToUserIdToContexts.get(guildId)!
+  getMixedContext(
+    guildId: string,
+    channelId: string,
+    includesFreeChat: boolean
+  ): ContextUnit[] {
+    const channelConfig = ConfigUtils.getChannelConfig(guildId, channelId)
+    channelConfig.userIdToContextUnits ??= {}
+    const userIdToContexts = channelConfig.userIdToContextUnits ?? {}
     const units: ContextUnit[] = []
-    for (const context of userIdToContexts.values()) {
+
+    for (const context of Object.values(userIdToContexts)) {
       for (const unit of context) {
         if (!unit.freeChat || includesFreeChat) {
           units.push(unit)
@@ -48,13 +39,14 @@ export class ContextManager {
 
   appendToContext(
     guildId: string,
+    channelId: string,
     userId: string,
     displayName: string,
     role: ContextUnit["role"],
     content: ContextUnit["content"],
     freeChat: ContextUnit["freeChat"]
   ) {
-    const context = this.getContext(guildId, userId)
+    const context = this.getContext(guildId, channelId, userId)
     context.push({
       role: role,
       name: displayName,
@@ -63,22 +55,42 @@ export class ContextManager {
       freeChat: freeChat
     })
 
-    console.log("Pushed", displayName, content)
     if (context.length > 64) {
       context.splice(64)
     }
 
-    ConfigUtils.setGuildIdToUserIdToContexts(this.guildIdToUserIdToContexts)
+    ConfigUtils.updateChannelConfig(guildId, channelId, (config) => {
+      const userIdToContextUnits = config.userIdToContextUnits ?? {}
+      userIdToContextUnits[userId] = context
+      return {
+        ...config,
+        userIdToContextUnits: userIdToContextUnits
+      }
+    })
   }
 
-  setContext(guildId: string, userId: string, context: ContextUnit[]) {
-    this.guildIdToUserIdToContexts.get(guildId)?.clear()
-    this.guildIdToUserIdToContexts.get(guildId)?.set(userId, context)
-    ConfigUtils.setGuildIdToUserIdToContexts(this.guildIdToUserIdToContexts)
+  setContext(
+    guildId: string,
+    channelId: string,
+    userId: string,
+    context: ContextUnit[]
+  ) {
+    ConfigUtils.updateChannelConfig(guildId, channelId, (config) => {
+      const userIdToContextUnits = config.userIdToContextUnits ?? {}
+      userIdToContextUnits[userId] = context
+      return {
+        ...config,
+        userIdToContextUnits: userIdToContextUnits
+      }
+    })
   }
 
-  removeContext(guildId: string) {
-    this.guildIdToUserIdToContexts.get(guildId)?.clear()
-    ConfigUtils.setGuildIdToUserIdToContexts(this.guildIdToUserIdToContexts)
+  removeContext(guildId: string, channelId: string) {
+    ConfigUtils.updateChannelConfig(guildId, channelId, (config) => {
+      return {
+        ...config,
+        userIdToContextUnits: {}
+      }
+    })
   }
 }

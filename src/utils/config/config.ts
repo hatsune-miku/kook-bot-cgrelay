@@ -1,25 +1,19 @@
 import { readFileSync, writeFileSync } from "fs"
 import { get } from "radash"
 import {
+  ChatBotBackend,
   ContextUnit,
-  GuildIdToUserIdToContexts,
-  GuildIdToUserIdToContextsData
+  GroupChatStrategy
 } from "../../chat/types"
+import { info } from "../logging/logger"
 
 export const MessageLengthUpperBound = Math.round(4000 * 0.9)
 
-export const WhitelistedGuildIds: Record<string, string> = {
-  "3266153385602000": "小分队",
-  "9705615544844948": "water",
-  "3340148861735314": "HL",
-  "4499354561413658": "saa",
-  "8624952735398189": "a1knla",
-  "7760397450327014": "sand",
-  "2140636354287494": "会员制餐厅"
-}
-
+/**
+ * 写的也太乱了！！！！！
+ */
 export default class ConfigUtils {
-  static config?: Config
+  static config?: GlobalScopeConfig
 
   static initialize() {
     try {
@@ -36,70 +30,65 @@ export default class ConfigUtils {
   static persist() {
     try {
       writeFileSync("config.json", JSON.stringify(ConfigUtils.config, null, 2))
+      info("Config persisted.")
     } catch (e) {
       console.error("Failed to persist config:", e)
     }
   }
 
-  static getUserConfig(userId: string): UserConfig {
-    return get(ConfigUtils.config, `user['${userId}]`) ?? {}
-  }
-
-  static setUserConfig(userId: string, userConfig: UserConfig) {
-    ConfigUtils.config = {
-      ...ConfigUtils.config,
-      user: {
-        ...ConfigUtils.config?.user,
-        [userId]: userConfig
-      }
-    }
-    ConfigUtils.persist()
-  }
-
-  static getGuildIdToUserIdToContexts(): GuildIdToUserIdToContexts {
-    const data = ConfigUtils.config?.guildIdToUserIdToContexts ?? {}
-    const guildIdToUserIdToContexts = new Map<
-      string,
-      Map<string, ContextUnit[]>
-    >()
-    const guildIds = Object.keys(data)
-
-    for (const guildId of guildIds) {
-      const userIdToContexts = data[guildId]
-      const userIdToContext = new Map<string, ContextUnit[]>()
-      const userIds = Object.keys(userIdToContexts)
-
-      for (const userId of userIds) {
-        userIdToContext.set(userId, userIdToContexts[userId])
-      }
-
-      guildIdToUserIdToContexts.set(guildId, userIdToContext)
-    }
-    return guildIdToUserIdToContexts
-  }
-
-  static setGuildIdToUserIdToContexts(
-    guildIdToUserIdToContexts: GuildIdToUserIdToContexts
-  ) {
-    const data: GuildIdToUserIdToContextsData = {}
-    const guildIds = guildIdToUserIdToContexts.keys()
-    for (const guildId of guildIds) {
-      data[guildId] = {}
-
-      const userIdToContext = guildIdToUserIdToContexts.get(guildId)!
-      const userIds = userIdToContext.keys()
-
-      for (const userId of userIds) {
-        data[guildId][userId] = userIdToContext.get(userId)!
-      }
-    }
+  static getGlobalConfig(): GlobalScopeConfig {
     ConfigUtils.config ??= {}
-    ConfigUtils.config.guildIdToUserIdToContexts = data
-    ConfigUtils.persist()
+    return ConfigUtils.config
   }
 
-  static getWhitelistedGuildReferenceName(guildId: string): string | undefined {
-    return WhitelistedGuildIds[guildId]
+  static getGuildConfig(guildId: string): GuildScopeConfig {
+    const config = ConfigUtils.getGlobalConfig()
+    config.guilds ??= {}
+    config.guilds[guildId] ??= {}
+    return config.guilds[guildId] ?? {}
+  }
+
+  static getChannelConfig(
+    guildId: string,
+    channelId: string
+  ): ChannelScopeConfig {
+    const guildConfig = ConfigUtils.getGuildConfig(guildId)
+    guildConfig.channels ??= {}
+    guildConfig.channels[channelId] ??= {}
+    return guildConfig.channels[channelId] ?? {}
+  }
+
+  static updateGlobalConfig(
+    updater: (config: GlobalScopeConfig) => GlobalScopeConfig
+  ) {
+    ConfigUtils.config = updater(ConfigUtils.getGlobalConfig())
+  }
+
+  static updateGuildConfig(
+    guildId: string,
+    updater: (config: GuildScopeConfig) => GuildScopeConfig
+  ) {
+    ConfigUtils.updateGlobalConfig((config) => ({
+      ...config,
+      guilds: {
+        ...config.guilds,
+        [guildId]: updater(config.guilds?.[guildId] ?? {})
+      }
+    }))
+  }
+
+  static updateChannelConfig(
+    guildId: string,
+    channelId: string,
+    updater: (config: ChannelScopeConfig) => ChannelScopeConfig
+  ) {
+    ConfigUtils.updateGuildConfig(guildId, (guildConfig) => ({
+      ...guildConfig,
+      channels: {
+        ...guildConfig.channels,
+        [channelId]: updater(guildConfig.channels?.[channelId] ?? {})
+      }
+    }))
   }
 }
 
@@ -107,9 +96,25 @@ export interface UserConfig {
   roles?: string[]
 }
 
-export interface Config {
-  user?: {
+export interface GuildScopeConfig {
+  users?: {
     [userId: string]: UserConfig | undefined
   }
-  guildIdToUserIdToContexts?: GuildIdToUserIdToContextsData
+  channels?: {
+    [channelId: string]: ChannelScopeConfig | undefined
+  }
+}
+
+export interface ChannelScopeConfig {
+  backend?: ChatBotBackend
+  userIdToContextUnits?: Record<string, ContextUnit[]>
+  groupChatStrategy?: GroupChatStrategy
+  allowOmittingMentioningMe?: boolean
+}
+
+export interface GlobalScopeConfig {
+  guilds?: {
+    [guildId: string]: GuildScopeConfig | undefined
+  }
+  whiteListedGuildIds?: Record<string, string>
 }

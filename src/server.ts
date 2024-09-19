@@ -6,9 +6,10 @@
  * @Description   : Magic. Don't touch.
  */
 
-import { info } from "console"
 import express from "express"
-import { main } from "./bot"
+import { deinitialize, main } from "./bot"
+import { exit } from "process"
+import { info } from "./utils/logging/logger"
 
 info("Server Startup")
 
@@ -18,4 +19,10 @@ const port = 6308
 expressApp.listen(port, async () => {
   await main()
   info(`Server listening at http://localhost:${port}`)
+})
+
+process.on("SIGINT", () => {
+  deinitialize()
+  info("Server Shutdown")
+  exit(0)
 })

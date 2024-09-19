@@ -26,7 +26,7 @@ function makeContext(
       {
         role: "system",
         content:
-          "你是ChatGPT，作为某即时通讯平台的Bot，为每个用户提供简短的解答。"
+          "你是ChatGPT。请你作为通讯平台KOOK的群聊的一员，参与大家的讨论。请总是给对话的最后一条以适当关注，那可能是用户对你的提问。"
       },
       ...(units as ChatCompletionMessageParam[])
     ]

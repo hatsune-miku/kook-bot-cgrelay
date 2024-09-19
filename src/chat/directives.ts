@@ -5,22 +5,16 @@ import { Events, KCardMessage, RespondToUserParameters } from "../events"
 import { displayNameFromUser } from "../utils"
 import { RequestMethod, Requests } from "../utils/krequest/request"
 import { map } from "radash"
-import { extractContent } from "../utils/kevent/utils"
 import ConfigUtils from "../utils/config/config"
 import { ContextManager } from "./context-manager"
 import { ChatBotBackend, ContextUnit, GroupChatStrategy } from "./types"
-import { CreateChannelMessageProps } from "../utils/krequest/types"
-import { exit } from "process"
 
 export class ChatDirectivesManager {
-  private userIdToProperties = new Map<string, UserProperties>()
-  private userIdToV2TokenHeaders = new Map<string, Record<string, string>>()
-  private groupChatStrategy: GroupChatStrategy = GroupChatStrategy.Normal
-  private allowOmittingMentioningMe = false
-  private superKookMode = false
+  private guildIdToUserIdToProperties = new Map<
+    string,
+    Map<string, UserProperties>
+  >()
   private contextManager: ContextManager | null = null
-  private chatBotBackend: ChatBotBackend = ChatBotBackend.GPT4o
-  private shouldShowModelName = false
 
   constructor(private eventEmitter: EventEmitter) {}
 
@@ -33,26 +27,28 @@ export class ChatDirectivesManager {
   }
 
   handleGroupChat(event: ParseEventResultValid) {
+    const guildId = event.originalEvent.extra.guild_id
+    const channelId = event.originalEvent.target_id
+
     if (event.parameter === "normal") {
-      this.setGroupChatStrategy(GroupChatStrategy.Normal)
+      this.setGroupChatStrategy(guildId, channelId, GroupChatStrategy.Normal)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "好欸！已启用群聊模式！"
       })
     } else if (event.parameter === "legacy") {
-      this.setGroupChatStrategy(GroupChatStrategy.Legacy)
+      this.setGroupChatStrategy(guildId, channelId, GroupChatStrategy.Legacy)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "已启用传统群聊模式！仅@我的消息会被计算。"
       })
     } else if (event.parameter === "off") {
-      this.setGroupChatStrategy(GroupChatStrategy.Off)
+      this.setGroupChatStrategy(guildId, channelId, GroupChatStrategy.Off)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "好！已关闭群聊模式！"
       })
     } else {
-      this.setGroupChatStrategy(GroupChatStrategy.Off)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "参数不合法，应该输入 normal, legacy 或者 off"
@@ -90,9 +86,18 @@ export class ChatDirectivesManager {
     })
 
     mentionedUsers.forEach((user) => {
-      ConfigUtils.setUserConfig(user.metadata.id, {
-        roles: user.roles
-      })
+      ConfigUtils.updateGuildConfig(
+        event.originalEvent.extra.guild_id,
+        (config) => {
+          if (config && config.users) {
+            const userConfig = config.users[user.metadata.id]
+            if (userConfig) {
+              userConfig.roles = user.roles
+            }
+          }
+          return config
+        }
+      )
     })
 
     const displayNames = mentionedUsers.map((user) =>
@@ -137,9 +142,18 @@ export class ChatDirectivesManager {
     })
 
     mentionedUsers.forEach((user) => {
-      ConfigUtils.setUserConfig(user.metadata.id, {
-        roles: user.roles
-      })
+      ConfigUtils.updateGuildConfig(
+        event.originalEvent.extra.guild_id,
+        (config) => {
+          if (config && config.users) {
+            const userConfig = config.users[user.metadata.id]
+            if (userConfig) {
+              userConfig.roles = user.roles
+            }
+          }
+          return config
+        }
+      )
     })
 
     const displayNames = mentionedUsers.map((user) =>
@@ -155,65 +169,23 @@ export class ChatDirectivesManager {
   }
 
   async handleSwitchUsingNamespaceMiku(event: ParseEventResultValid) {
+    const guildId = event.originalEvent.extra.guild_id
+    const channelId = event.originalEvent.target_id
+
     if (event.parameter === "on") {
-      this.setAllowOmittingMentioningMe(true)
+      this.setAllowOmittingMentioningMe(guildId, channelId, true)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "好！后续指令无需再@我即可执行！"
       })
     } else if (event.parameter === "off") {
-      this.setAllowOmittingMentioningMe(false)
+      this.setAllowOmittingMentioningMe(guildId, channelId, false)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "disabled `allowOmittingMentioningMe`"
       })
     } else {
-      this.setAllowOmittingMentioningMe(false)
-      this.respondToUser({
-        originalEvent: event.originalEvent,
-        content: "参数不合法，应该输入 on 或者 off"
-      })
-    }
-  }
-
-  async handleSwitchSuperKookMode(event: ParseEventResultValid) {
-    if (event.parameter === "on") {
-      this.setSuperKookMode(true)
-      this.respondToUser({
-        originalEvent: event.originalEvent,
-        content:
-          "哼哼！无情开搓机器概率UP，所有消息有 (spl)40%(spl) 的概率被选为幸运对话"
-      })
-      const cardMessage: KCardMessage = [
-        {
-          type: "card",
-          theme: "primary",
-          size: "lg",
-          modules: [
-            {
-              type: "container",
-              elements: [
-                {
-                  type: "image",
-                  src: "https://img.kookapp.cn/emojis/5534585084574314/0ZxPSw8llx04g04g.png"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-      this.respondCardMessageToUser({
-        originalEvent: event.originalEvent,
-        content: JSON.stringify(cardMessage)
-      })
-    } else if (event.parameter === "off") {
-      this.setSuperKookMode(false)
-      this.respondToUser({
-        originalEvent: event.originalEvent,
-        content: "呜呜呜，无情开搓机器已关闭"
-      })
-    } else {
-      this.setSuperKookMode(false)
+      this.setAllowOmittingMentioningMe(guildId, channelId, false)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "参数不合法，应该输入 on 或者 off"
@@ -268,52 +240,24 @@ export class ChatDirectivesManager {
     })
   }
 
-  async handleUpdateToken(event: ParseEventResultValid) {
-    const stringWithToken = extractContent(event.originalEvent)
-    const mayBeHeaders = stringWithToken.split("\n")
-    const headers = {
-      cookie: "",
-      "x-client-sessionid": ""
-    }
-    const featuredKeys = Object.keys(headers)
-
-    for (const mayBeHeader of mayBeHeaders) {
-      const components = mayBeHeader.split(":")
-      if (components.length !== 2) {
-        continue
-      }
-      const [key, value] = components
-      const headerKey = key.trim().toLowerCase() as keyof typeof headers
-      if (!featuredKeys.includes(headerKey)) {
-        continue
-      }
-      headers[headerKey] = value.trim()
-    }
-
-    if (Object.values(headers).some((v) => v === "")) {
-      this.respondToUser({
-        originalEvent: event.originalEvent,
-        content: "数据不完整，无法更新"
-      })
-      return
-    }
-
-    this.userIdToV2TokenHeaders.set(event.userProperties.metadata.id, headers)
-
-    this.respondToUser({
-      originalEvent: event.originalEvent,
-      content: "token 解析成功，数据已记录。请输入 /play 更新游戏状态。"
-    })
-  }
-
   async handlePrintContext(event: ParseEventResultValid) {
     if (!this.contextManager) {
       return
     }
     const mixedContext = this.contextManager.getMixedContext(
       event.originalEvent.extra.guild_id,
+      event.originalEvent.target_id,
       true
     )
+
+    if (mixedContext.length === 0) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "当前频道的对话上下文为空~"
+      })
+      return
+    }
+
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: mixedContext
@@ -388,6 +332,10 @@ export class ChatDirectivesManager {
 
   async handleSwitchAIBackend(event: ParseEventResultValid) {
     const backend = event.parameter
+    const channelConfig = ConfigUtils.getChannelConfig(
+      event.originalEvent.extra.guild_id,
+      event.originalEvent.target_id
+    )
     if (
       [
         ChatBotBackend.GPT4,
@@ -397,23 +345,43 @@ export class ChatDirectivesManager {
         ChatBotBackend.GPT4Turbo2024
       ].includes(backend as ChatBotBackend)
     ) {
-      this.chatBotBackend = backend as ChatBotBackend
+      ConfigUtils.updateChannelConfig(
+        event.originalEvent.extra.guild_id,
+        event.originalEvent.target_id,
+        (config) => {
+          return {
+            ...config,
+            backend: backend as ChatBotBackend
+          }
+        }
+      )
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: `已切换至 ChatGPT (${backend})`
       })
     } else if (backend === ChatBotBackend.Ernie) {
-      this.chatBotBackend = ChatBotBackend.Ernie
+      ConfigUtils.updateChannelConfig(
+        event.originalEvent.extra.guild_id,
+        event.originalEvent.target_id,
+        (config) => {
+          return {
+            ...config,
+            backend: backend as ChatBotBackend
+          }
+        }
+      )
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "已切换至文心一言 (ERNIE-4.0-Turbo-8K)"
       })
     } else {
+      const channelName = event.originalEvent.extra.channel_name
+      const channelId = event.originalEvent.target_id
       this.respondToUser({
         originalEvent: event.originalEvent,
-        content: `当前模型: ${this.chatBotBackend}，可选: ${Object.values(
-          ChatBotBackend
-        ).join(", ")}`
+        content: `当前频道: ${channelName} (${channelId}) 所用的模型是 ${
+          channelConfig.backend ?? ChatBotBackend.GPT4o
+        }，可选: ${Object.values(ChatBotBackend).join(", ")}`
       })
     }
   }
@@ -458,6 +426,7 @@ export class ChatDirectivesManager {
       const context = JSON.parse(decoded) as ContextUnit[]
       this.contextManager?.setContext(
         event.originalEvent.extra.guild_id,
+        event.originalEvent.target_id,
         event.userProperties.metadata.id,
         context
       )
@@ -476,75 +445,128 @@ export class ChatDirectivesManager {
 
   async handleObliviate(event: ParseEventResultValid) {
     const guildId = event.originalEvent.extra.guild_id
-    this.contextManager?.removeContext(guildId)
+    const channelId = event.originalEvent.target_id
+    this.contextManager?.removeContext(guildId, channelId)
   }
 
-  async handleSetShowModelName(event: ParseEventResultValid) {
-    if (event.parameter === "on") {
-      this.shouldShowModelName = true
+  async handleWhitelistGuild(event: ParseEventResultValid) {
+    const [guildId, nickname] = (event.parameter ?? "").split(" ")
+    if (!guildId || !nickname) {
       this.respondToUser({
         originalEvent: event.originalEvent,
-        content: "已开启在回复中显示模型名称"
+        content: "guild-id 和 nickname 不能为空~"
       })
-    } else if (event.parameter === "off") {
-      this.shouldShowModelName = false
-      this.respondToUser({
-        originalEvent: event.originalEvent,
-        content: "已关闭在回复中显示模型名称"
-      })
-    } else {
-      this.respondToUser({
-        originalEvent: event.originalEvent,
-        content: "参数不合法，应该输入 on 或者 off"
-      })
+      return
     }
+
+    ConfigUtils.updateGlobalConfig((config) => {
+      config.whiteListedGuildIds ??= {}
+      config.whiteListedGuildIds[guildId] = nickname
+      return config
+    })
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: `已将 ${guildId} 加入白名单`
+    })
   }
 
-  setGroupChatStrategy(strategy: GroupChatStrategy) {
-    this.groupChatStrategy = strategy
+  async handleUnwhitelistGuild(event: ParseEventResultValid) {
+    const guildId = event.parameter
+    if (!guildId) {
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: "guild id 不能为空~"
+      })
+      return
+    }
+    ConfigUtils.updateGlobalConfig((config) => {
+      config.whiteListedGuildIds ??= {}
+      delete config.whiteListedGuildIds[guildId]
+      return config
+    })
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: `已将 ${guildId} 移出白名单`
+    })
   }
 
-  setAllowOmittingMentioningMe(enabled: boolean) {
-    this.allowOmittingMentioningMe = enabled
+  async showWhitelist(event: ParseEventResultValid) {
+    const guilds = ConfigUtils.getGlobalConfig().whiteListedGuildIds ?? {}
+    this.respondToUser({
+      originalEvent: event.originalEvent,
+      content: `白名单服务器: ${Object.entries(guilds)
+        .map((k, v) => `${k}: ${v}`)
+        .join(", ")}`
+    })
   }
 
-  setSuperKookMode(enabled: boolean) {
-    this.superKookMode = enabled
+  setGroupChatStrategy(
+    guildId: string,
+    channelId: string,
+    strategy: GroupChatStrategy
+  ) {
+    ConfigUtils.updateChannelConfig(guildId, channelId, (config) => {
+      return {
+        ...config,
+        groupChatStrategy: strategy
+      }
+    })
   }
 
-  getChatBotBackend(): ChatBotBackend {
-    return this.chatBotBackend
+  setAllowOmittingMentioningMe(
+    guildId: string,
+    channelId: string,
+    enabled: boolean
+  ) {
+    ConfigUtils.updateChannelConfig(guildId, channelId, (config) => {
+      return {
+        ...config,
+        allowOmittingMentioningMe: enabled
+      }
+    })
   }
 
-  getGroupChatStrategy(): GroupChatStrategy {
-    return this.groupChatStrategy
+  getChatBotBackend(guildId: string, channelId: string): ChatBotBackend {
+    return (
+      ConfigUtils.getChannelConfig(guildId, channelId).backend ??
+      ChatBotBackend.GPT4o
+    )
   }
 
-  getShouldShowModelName(): boolean {
-    return this.shouldShowModelName
+  getGroupChatStrategy(guildId: string, channelId: string): GroupChatStrategy {
+    return (
+      ConfigUtils.getChannelConfig(guildId, channelId).groupChatStrategy ??
+      GroupChatStrategy.Normal
+    )
   }
 
-  isAllowOmittingMentioningMeEnabled() {
-    return this.allowOmittingMentioningMe
-  }
-
-  isSuperKookModeEnabled() {
-    return this.superKookMode
+  isAllowOmittingMentioningMeEnabled(guildId: string, channelId: string) {
+    return ConfigUtils.getChannelConfig(guildId, channelId)
+      .allowOmittingMentioningMe
   }
 
   setContextManager(contextManager: ContextManager) {
     this.contextManager = contextManager
   }
 
-  tryInitializeForUser(user: KUser) {
-    if (!this.userIdToProperties.has(user.id)) {
-      this.userIdToProperties.set(user.id, makeDefaultUserPropertiesFor(user))
+  tryInitializeForUser(guildId: string, user: KUser) {
+    if (!this.guildIdToUserIdToProperties.has(guildId)) {
+      this.guildIdToUserIdToProperties.set(guildId, new Map())
+    }
+    const userIdToProperties = this.guildIdToUserIdToProperties.get(guildId)!
+
+    if (!userIdToProperties.has(user.id)) {
+      userIdToProperties.set(user.id, {
+        metadata: user,
+        roles: []
+      })
     }
   }
 
   async getUser(userId: string, guildId: string): Promise<UserProperties> {
-    if (this.userIdToProperties.has(userId)) {
-      return this.userIdToProperties.get(userId)!
+    const userIdToProperties = this.guildIdToUserIdToProperties.get(guildId)
+    if (userIdToProperties?.has(userId)) {
+      return userIdToProperties.get(userId)!
     }
 
     const result = await Requests.queryUser({
@@ -555,9 +577,9 @@ export class ChatDirectivesManager {
       throw new Error(`User request failed: ${result.message}`)
     }
 
-    this.tryInitializeForUser(result.data)
+    this.tryInitializeForUser(guildId, result.data)
     return {
-      roles: ConfigUtils.getUserConfig(userId).roles ?? [],
+      roles: ConfigUtils.getGuildConfig(guildId).users?.[userId]?.roles ?? [],
       metadata: result.data
     }
   }
@@ -629,7 +651,10 @@ export class ChatDirectivesManager {
     }
     if (!directiveItem.permissionGroups.includes("everyone")) {
       // TODO 哈哈哈哈哈哈
-      if (parsedEvent.userProperties.metadata.identify_num !== "6308") {
+      const isTrustedUser =
+        parsedEvent.userProperties.metadata.id === "3553226959"
+
+      if (!isTrustedUser) {
         if (
           !parsedEvent.userProperties.roles.some((r) =>
             directiveItem.permissionGroups.includes(r)
@@ -647,14 +672,6 @@ export class ChatDirectivesManager {
   }
 }
 
-function makeDefaultUserPropertiesFor(user: KUser): UserProperties {
-  const config = ConfigUtils.getUserConfig(user.id)
-  return {
-    roles: config.roles ?? [],
-    metadata: user
-  }
-}
-
 function prepareBuiltinDirectives(
   manager: ChatDirectivesManager
 ): ChatDirectiveItem[] {
@@ -663,7 +680,7 @@ function prepareBuiltinDirectives(
       triggerWord: "groupchat",
       parameterDescription: "normal|legacy|off",
       description:
-        "群聊模式，启用后，各人与机器人的对话将不再隔离。机器人能够分辨哪句话是谁说的。",
+        "群聊模式。启用后，在当前频道下，各人与机器人的对话将不再隔离。机器人能够分辨哪句话是谁说的。",
       defaultValue: "normal",
       permissionGroups: ["admin"],
       handler: manager.handleGroupChat.bind(manager)
@@ -693,14 +710,6 @@ function prepareBuiltinDirectives(
       handler: manager.handleSwitchUsingNamespaceMiku.bind(manager)
     },
     {
-      triggerWord: "kook",
-      parameterDescription: "on|off",
-      description: "哼哼~",
-      defaultValue: undefined,
-      permissionGroups: ["everyone"],
-      handler: manager.handleSwitchSuperKookMode.bind(manager)
-    },
-    {
       triggerWord: "query",
       parameterDescription: "@user",
       description: "查询@的人的基本信息",
@@ -709,17 +718,9 @@ function prepareBuiltinDirectives(
       handler: manager.handleQuery.bind(manager)
     },
     {
-      triggerWord: "updatetoken",
-      parameterDescription: "<fiddler-data>",
-      description: "更新 KOOK 账号 token",
-      defaultValue: undefined,
-      permissionGroups: ["everyone"],
-      handler: manager.handleUpdateToken.bind(manager)
-    },
-    {
       triggerWord: "print_context",
       parameterDescription: "",
-      description: "(调试限定) 输出当前对话上下文",
+      description: "(调试限定) 输出当前频道的对话上下文",
       defaultValue: undefined,
       permissionGroups: ["developer"],
       handler: manager.handlePrintContext.bind(manager)
@@ -743,7 +744,7 @@ function prepareBuiltinDirectives(
     {
       triggerWord: "set_backend",
       parameterDescription: Object.values(ChatBotBackend).join("|"),
-      description: `更换 AI 实现，可选范围：${Object.values(
+      description: `更换当前频道 AI 实现，可选范围：${Object.values(
         ChatBotBackend
       ).join(", ")}`,
       defaultValue: undefined,
@@ -753,7 +754,7 @@ function prepareBuiltinDirectives(
     {
       triggerWord: "set_context",
       parameterDescription: "<context>",
-      description: "设置对话上下文",
+      description: "设置当前频道的对话上下文",
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleSetContext.bind(manager)
@@ -761,18 +762,42 @@ function prepareBuiltinDirectives(
     {
       triggerWord: "obliviate",
       parameterDescription: "",
-      description: "遗忘当前服务器对应的上下文",
+      description: "遗忘当前服务器的当前频道对应的上下文",
       defaultValue: undefined,
       permissionGroups: ["admin"],
       handler: manager.handleObliviate.bind(manager)
     },
     {
-      triggerWord: "set_show_model_name",
-      parameterDescription: "on|off",
-      description: "开启或关闭在回复中显示模型名称",
+      triggerWord: "whitelist",
+      parameterDescription: "<guild-id> <nickname>",
+      description: "将指定服务器加入白名单",
       defaultValue: undefined,
       permissionGroups: ["admin"],
-      handler: manager.handleSetShowModelName.bind(manager)
+      handler: manager.handleWhitelistGuild.bind(manager)
+    },
+    {
+      triggerWord: "unwhitelist",
+      parameterDescription: "<guild-id>",
+      description: "将指定服务器移出白名单",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleUnwhitelistGuild.bind(manager)
+    },
+    {
+      triggerWord: "show_whitelist",
+      parameterDescription: "",
+      description: "查看白名单服务器",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.showWhitelist.bind(manager)
+    },
+    {
+      triggerWord: "unwhitelist",
+      parameterDescription: "<guild-id>",
+      description: "将指定服务器移出白名单",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleUnwhitelistGuild.bind
     }
   ]
 }

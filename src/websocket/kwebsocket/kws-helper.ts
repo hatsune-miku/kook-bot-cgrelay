@@ -72,12 +72,10 @@ export class KWSHelper {
     props ||= {}
     if (props.afterMillis) {
       setTimeout(() => {
-        info("Switched state from", this.state, "to", state)
         this.state = state
         this.handleStateUpdated()
       }, props.afterMillis)
     } else {
-      info("Switched state from", this.state, "to", state)
       this.state = state
       this.handleStateUpdated()
     }
@@ -333,7 +331,6 @@ export class KWSHelper {
     sn: number | undefined,
     messageEvent: KEvent<KTextChannelExtra>
   ) {
-    info("Received message:", messageEvent)
     this.onTextChannelEvent?.(messageEvent, sn)
   }
 
@@ -341,7 +338,6 @@ export class KWSHelper {
     sn: number | undefined,
     event: KEvent<KSystemEventExtra>
   ) {
-    info("Received system event:", event)
     this.onSystemEvent?.(event, sn)
   }
 
@@ -414,7 +410,6 @@ export class KWSHelper {
   }
 
   handleReceivedPong() {
-    info("Server ponged back")
     if (
       this.state === KWSState.WAITING_FOR_HEARTBEAT_RESPONSE ||
       this.state === KWSState.WAITING_FOR_HEARTBEAT_RESPONSE_1ST_RETRY
@@ -511,18 +506,10 @@ export class KWSHelper {
   }
 
   onWebSocketMessage(ev: WebSocket.MessageEvent) {
-    if (this.compression) {
-      info("Incoming message: (compressed)", "Decompressing...")
-    } else {
-      info("Incoming message, parsing JSON...")
-    }
-
     // 传来的信令对象，根据当时的compress参数，决定这会儿要不要解压
     const message: KMessage<unknown> = this.compression
       ? decompressKMessage(ev.data as Buffer)
       : JSON.parse(ev.data as string)
-
-    info("Incoming message:", JSON.stringify(message))
 
     // 分派消息
     this.dispatchKMessage(message)

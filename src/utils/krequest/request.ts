@@ -102,7 +102,6 @@ export class Requests {
         return fail(1146, "Speed rate hard limit reached.")
       }
       bucketToSpeedLimitIndication.set(bucket, responseHeader.rateLimit)
-      info("bucket", bucket, "speed limit indication", responseHeader.rateLimit)
     }
 
     try {

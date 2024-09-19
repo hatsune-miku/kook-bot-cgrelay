@@ -58,6 +58,10 @@ export async function main() {
   info("Initialization OK")
 }
 
+export function deinitialize() {
+  ConfigUtils.persist()
+}
+
 async function handleRespondToUserEvent(event: RespondToUserParameters) {
   const result = await Requests.createChannelMessage({
     type: KEventType.KMarkdown,
@@ -122,6 +126,7 @@ function handleSevereError(message: string) {
 
 async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const guildId = event.extra.guild_id
+  const channelId = event.target_id
   const myRoles = await roleManager.getMyRolesAt(guildId, shared.me.id)
   const isSentByMe = event.author_id == shared.me.id
 
@@ -132,11 +137,17 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const author = event.extra.author
   const displayName = displayNameFromUser(author)
   const isMentioningMe = isExplicitlyMentioningBot(event, shared.me.id, myRoles)
-  const groupChatStrategy = directivesManager.getGroupChatStrategy()
-  const guildReferenceName =
-    ConfigUtils.getWhitelistedGuildReferenceName(guildId)
+  const groupChatStrategy = directivesManager.getGroupChatStrategy(
+    guildId,
+    channelId
+  )
+  const calledByTrustedUser = event.extra.author.id === "3553226959"
+  const whitelisted =
+    (ConfigUtils.getGlobalConfig().whiteListedGuildIds ?? {}).hasOwnProperty(
+      guildId
+    ) || calledByTrustedUser
 
-  if (isMentioningMe && !guildReferenceName) {
+  if (isMentioningMe && !whitelisted) {
     await Requests.createChannelMessage({
       type: KEventType.KMarkdown,
       target_id: event.target_id,
@@ -146,22 +157,19 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     return
   }
 
-  info(displayName, "said:", content)
-
   // @我或者可以免除@我，都可以处理指令
   if (
     isMentioningMe ||
-    directivesManager.isAllowOmittingMentioningMeEnabled()
+    directivesManager.isAllowOmittingMentioningMeEnabled(guildId, channelId)
   ) {
     // Process directives
-    directivesManager.tryInitializeForUser(author)
+    directivesManager.tryInitializeForUser(guildId, author)
     const parsedEvent = await directivesManager.tryParseEvent(content, event)
     if (parsedEvent.shouldIntercept) {
-      if (!guildReferenceName) {
+      if (!whitelisted) {
         return
       }
 
-      info("It's a directive. Processing...")
       parsedEvent.mentionUserIds = parsedEvent.mentionUserIds.filter(
         (id) => id !== shared.me.id
       )
@@ -176,6 +184,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const shouldIncludeFreeChat = groupChatStrategy === GroupChatStrategy.Normal
   contextManager.appendToContext(
     guildId,
+    channelId,
     author.id,
     author.nickname,
     "user",
@@ -203,14 +212,16 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const isGroupChat = groupChatStrategy !== GroupChatStrategy.Off
   const createdMessage = sendResult.data
   const context = isGroupChat
-    ? contextManager.getMixedContext(guildId, shouldIncludeFreeChat)
-    : contextManager.getContext(guildId, author.id)
+    ? contextManager.getMixedContext(guildId, channelId, shouldIncludeFreeChat)
+    : contextManager.getContext(guildId, channelId, author.id)
 
-  info("context", context)
-
-  const backendModelName = directivesManager.getChatBotBackend()
+  const backendModelName = directivesManager.getChatBotBackend(
+    guildId,
+    channelId
+  )
   const backend =
-    directivesManager.getChatBotBackend() === ChatBotBackend.Ernie
+    directivesManager.getChatBotBackend(guildId, channelId) ===
+    ChatBotBackend.Ernie
       ? chatCompletionWithoutStreamErnie
       : (groupChat: boolean, context: ContextUnit[]) =>
           chatCompletionWithoutStreamChatGPT(
@@ -223,6 +234,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   info("model response", modelResponse)
   contextManager.appendToContext(
     guildId,
+    channelId,
     author.id,
     backendModelName,
     "assistant",
@@ -230,14 +242,10 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     false
   )
 
-  const contentRepliedToUser = directivesManager.getShouldShowModelName()
-    ? `(${backendModelName}) ${modelResponse}`
-    : modelResponse
-
   const performUpdateMessage = () =>
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
-      content: contentRepliedToUser,
+      content: modelResponse,
       quote: event.msg_id,
       extra: {
         type: KEventType.KMarkdown,

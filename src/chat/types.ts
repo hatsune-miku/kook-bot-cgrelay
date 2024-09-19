@@ -20,11 +20,3 @@ export enum ChatBotBackend {
   GPT4 = "gpt-4",
   Ernie = "ernie"
 }
-
-export type GuildIdToUserIdToContexts = Map<string, Map<string, ContextUnit[]>>
-
-export type GuildIdToUserIdToContextsData = {
-  [guildId: string]: {
-    [userId: string]: ContextUnit[]
-  }
-}
