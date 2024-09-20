@@ -33,6 +33,7 @@ function makeContext(
           - 若需要输出 Markdown，则下列额外规则适用：
               - 请勿使用 #, ##, ###
               - 支持 (spl)文字点击后显示(spl) 语法
+              - 日常对话中也可以巧用 Markdown: ~~碎碎念~~，**强调语气** 等。可极偶尔地这样使用。
         `
       },
       ...(units as ChatCompletionMessageParam[])
