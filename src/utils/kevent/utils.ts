@@ -25,11 +25,28 @@ export function removingKMarkdownLabels(content: string, labels: string[]) {
 }
 
 export function extractContent(event: KEvent<KTextChannelExtra>) {
-  return removingKMarkdownLabels(event.content, ["rol", "met"])
-    .replace(new RegExp(String.raw`\\\(`, "g"), "(")
-    .replace(new RegExp(String.raw`\\\)`, "g"), ")")
-    .replace(new RegExp(String.raw`\\\[`, "g"), "[")
-    .replace(new RegExp(String.raw`\\\]`, "g"), "]")
-    .replace(new RegExp(String.raw`\\\{`, "g"), "{")
-    .replace(new RegExp(String.raw`\\\}`, "g"), "}")
+  const labels = ["rol", "met"]
+  let content = event.content
+
+  // Remove KMarkdown labels
+  for (const label of labels) {
+    const regex = new RegExp(`\\(${label}\\).+?\\(${label}\\)`, "g")
+    content = content.replace(regex, "")
+  }
+
+  // Replace escaped characters
+  const replacements: [RegExp, string][] = [
+    [/\\\(/g, "("],
+    [/\\\)/g, ")"],
+    [/\\\[/g, "["],
+    [/\\\]/g, "]"],
+    [/\\\{/g, "{"],
+    [/\\\}/g, "}"]
+  ]
+
+  for (const [regex, replacement] of replacements) {
+    content = content.replace(regex, replacement)
+  }
+
+  return content.trim()
 }

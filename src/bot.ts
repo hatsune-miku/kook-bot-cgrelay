@@ -200,7 +200,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const sendResult = await Requests.createChannelMessage({
     type: KEventType.KMarkdown,
     target_id: event.target_id,
-    content: `稍等，正在生成回复...`,
+    content: "miku打字中...",
     quote: event.msg_id
   })
 
