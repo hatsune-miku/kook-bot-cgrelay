@@ -13,6 +13,8 @@ export enum GroupChatStrategy {
 }
 
 export enum ChatBotBackend {
+  GPTo1Preview = "o1-preview",
+  GPTo1Mini = "o1-mini",
   GPT4o = "gpt-4o",
   GPT4o2024 = "gpt-4o-2024-05-13",
   GPT4Turbo = "gpt-4-turbo",

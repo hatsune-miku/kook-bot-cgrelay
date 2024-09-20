@@ -338,6 +338,8 @@ export class ChatDirectivesManager {
     )
     if (
       [
+        ChatBotBackend.GPTo1Preview,
+        ChatBotBackend.GPTo1Mini,
         ChatBotBackend.GPT4,
         ChatBotBackend.GPT4o,
         ChatBotBackend.GPT4Turbo,
