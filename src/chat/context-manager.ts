@@ -51,7 +51,7 @@ export class ContextManager {
     const context = this.getContext(guildId, channelId, userId)
     context.push({
       role: role,
-      name: displayName,
+      name: `${displayName} (id=${userId})`,
       content: content,
       timestamp: Date.now(),
       freeChat: freeChat
