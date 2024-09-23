@@ -20,7 +20,9 @@ function makeContext(
     const units = context.map((unit) => ({
       role: unit.role === "user" ? "system" : "assistant",
       content:
-        unit.role === "user" ? `${unit.name}说: ${unit.content}` : unit.content
+        unit.role === "user"
+          ? `${unit.name}(id=${unit.id})说: ${unit.content}`
+          : unit.content
     }))
     return [
       {

@@ -261,7 +261,10 @@ export class ChatDirectivesManager {
     this.respondToUser({
       originalEvent: event.originalEvent,
       content: mixedContext
-        .map((unit) => `${unit.name}说：${unit.content.slice(0, 16) + "..."}`)
+        .map(
+          (unit) =>
+            `${unit.name} (${unit.id})说：${unit.content.slice(0, 16) + "..."}`
+        )
         .join("\n\n")
     })
   }

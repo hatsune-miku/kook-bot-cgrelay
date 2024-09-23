@@ -24,9 +24,9 @@ function mergeUserQuestions(context: ContextUnit[]): ContextUnit[] {
       const lastName = lastUnit.name
       const lastContent = lastUnit.content
       if (lastUnit.name === "system") {
-        lastUnit.content += `\n用户[${unit.name}]说：${unit.content}`
+        lastUnit.content += `\n用户[${unit.name} (id=${unit.id})]说：${unit.content}`
       } else {
-        lastUnit.content = `用户[${lastName}]说：${lastContent}\n用户[${unit.name}]说：${unit.content}`
+        lastUnit.content = `用户[${lastName} (id=${unit.id})]说：${lastContent}\n用户[${unit.name} (id=${unit.id})]说：${unit.content}`
         lastUnit.name = "system"
       }
       continue
