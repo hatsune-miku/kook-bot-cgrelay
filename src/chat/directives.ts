@@ -263,7 +263,9 @@ export class ChatDirectivesManager {
       content: mixedContext
         .map(
           (unit) =>
-            `${unit.name} (${unit.id})说：${unit.content.slice(0, 16) + "..."}`
+            `${unit.name} (id=${unit.id})说：${
+              unit.content.slice(0, 16) + "..."
+            }`
         )
         .join("\n\n")
     })
