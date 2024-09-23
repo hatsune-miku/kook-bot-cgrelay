@@ -22,9 +22,11 @@ export class ContextManager {
     const userIdToContexts = channelConfig.userIdToContextUnits ?? {}
     const units: ContextUnit[] = []
 
-    for (const context of Object.values(userIdToContexts)) {
+    for (let userId of Object.keys(userIdToContexts)) {
+      const context = userIdToContexts[userId]
       for (const unit of context) {
         if (!unit.freeChat || includesFreeChat) {
+          unit.name = `${unit.name} (id=${userId})`
           units.push(unit)
         }
       }

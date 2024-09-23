@@ -2,7 +2,7 @@ import { EventEmitter } from "stream"
 import { info, warn } from "../utils/logging/logger"
 import { KEvent, KTextChannelExtra, KUser } from "../websocket/kwebsocket/types"
 import { Events, KCardMessage, RespondToUserParameters } from "../events"
-import { displayNameFromUser } from "../utils"
+import { displayNameFromUser, isTrustedUser } from "../utils"
 import { RequestMethod, Requests } from "../utils/krequest/request"
 import { map } from "radash"
 import ConfigUtils from "../utils/config/config"
@@ -650,11 +650,7 @@ export class ChatDirectivesManager {
       return
     }
     if (!directiveItem.permissionGroups.includes("everyone")) {
-      // TODO 哈哈哈哈哈哈
-      const isTrustedUser =
-        parsedEvent.userProperties.metadata.id === "3553226959"
-
-      if (!isTrustedUser) {
+      if (!isTrustedUser(parsedEvent.userProperties.metadata.id)) {
         if (
           !parsedEvent.userProperties.roles.some((r) =>
             directiveItem.permissionGroups.includes(r)

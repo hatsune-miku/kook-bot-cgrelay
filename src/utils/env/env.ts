@@ -1,13 +1,16 @@
-import "dotenv/config"
+import dotenv from "dotenv"
 import { die } from "../server/die"
 
+const result = dotenv.config({ path: ".env" })
+const config = result.parsed ?? {}
+
 export const Env: EnvType = {
-  BotToken: process.env.BOT_TOKEN || die("环境配置错误：BOT_TOKEN"),
-  OpenAIKeys: process.env.OPENAI_API_KEYS?.split(",") || [],
+  BotToken: config.BOT_TOKEN || die("环境配置错误：BOT_TOKEN"),
+  OpenAIKeys: config.OPENAI_API_KEYS?.split(",") || [],
   ErnieAccessKey:
-    process.env.ERNIE_ACCESS_KEY || die("环境配置错误：ERNIE_ACCESS_KEY"),
+    config.ERNIE_ACCESS_KEY || die("环境配置错误：ERNIE_ACCESS_KEY"),
   ErnieSecretKey:
-    process.env.ERNIE_SECRET_KEY || die("环境配置错误：ERNIE_SECRET_KEY")
+    config.ERNIE_SECRET_KEY || die("环境配置错误：ERNIE_SECRET_KEY")
 }
 
 export interface EnvType {

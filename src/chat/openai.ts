@@ -31,8 +31,10 @@ function makeContext(
           - 优先使用全角波浪号代替感叹号，但不要全代替
           - 若需要输出 Markdown，则下列额外规则适用：
               - 请勿使用 #, ##, ###
-              - 支持 (spl)文字点击后显示(spl) 语法
+              - 支持 (spl)文字点击后显示(spl) 语法来显示带有剧透的内容
+              - 支持 (met)对方id(met) 语法来提及（艾特）对方，例如 (met)123456(met)
               - 日常对话中也可以巧用 Markdown: ~~碎碎念~~，**强调语气** 等。可极偶尔地这样使用。
+              - 注意spl和met外围的括号必须为半角
         `
       },
       ...(units as ChatCompletionMessageParam[])

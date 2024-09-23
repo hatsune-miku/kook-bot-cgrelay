@@ -27,7 +27,7 @@ import { die } from "../server/die"
 import { MessageLengthUpperBound } from "../config/config"
 import { sleep } from "radash"
 
-export const BASE_URL = "https://www.kookapp.cn"
+export const BASE_URL = "https://tttt-www.dev.chuanyuapp.com/"
 export const AUTHORIZATION = `Bot ${Env.BotToken}`
 
 export type RequestMethod = "GET" | "POST" | "PUT" | "DELETE"
@@ -57,7 +57,7 @@ export class Requests {
       }
     }
 
-    const requestData: object = data ?? {}
+    const requestData: any = data ?? {}
     const headers: HeadersInit = {
       Authorization: AUTHORIZATION,
       "Content-type": "application/json"
@@ -92,7 +92,11 @@ export class Requests {
 
     if (responseHeader) {
       const actualBucket = responseHeader.rateLimit.bucket
-      if (actualBucket !== bucket) {
+      if (
+        actualBucket !== bucket &&
+        !actualBucket.includes(bucket) &&
+        !bucket.includes(actualBucket)
+      ) {
         die(`Bucket not match (expected=${bucket}, actual=${actualBucket}).`)
       }
 

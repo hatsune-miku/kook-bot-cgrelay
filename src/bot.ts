@@ -25,7 +25,7 @@ import {
 } from "./websocket/kwebsocket/types"
 import { EventEmitter } from "stream"
 import { Events, RespondToUserParameters } from "./events"
-import { displayNameFromUser } from "./utils"
+import { displayNameFromUser, isTrustedUser } from "./utils"
 import ConfigUtils from "./utils/config/config"
 import { ChatBotBackend, ContextUnit, GroupChatStrategy } from "./chat/types"
 
@@ -141,7 +141,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     guildId,
     channelId
   )
-  const calledByTrustedUser = event.extra.author.id === "3553226959"
+  const calledByTrustedUser = isTrustedUser(event.extra.author.id)
   const whitelisted =
     (ConfigUtils.getGlobalConfig().whiteListedGuildIds ?? {}).hasOwnProperty(
       guildId
