@@ -1,4 +1,5 @@
 export interface ContextUnit {
+  id: string
   role: "assistant" | "user"
   name: string
   content: string

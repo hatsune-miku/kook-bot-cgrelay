@@ -26,10 +26,7 @@ export class ContextManager {
       const context = userIdToContexts[userId]
       for (const unit of context) {
         if (!unit.freeChat || includesFreeChat) {
-          units.push({
-            ...unit,
-            name: `${unit.name} (id=${userId})`
-          })
+          units.push(unit)
         }
       }
     }
@@ -52,8 +49,9 @@ export class ContextManager {
   ) {
     const context = this.getContext(guildId, channelId, userId)
     context.push({
+      id: userId,
       role: role,
-      name: `${displayName} (id=${userId})`,
+      name: displayName,
       content: content,
       timestamp: Date.now(),
       freeChat: freeChat

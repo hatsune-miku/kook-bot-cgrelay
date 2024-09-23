@@ -235,7 +235,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   contextManager.appendToContext(
     guildId,
     channelId,
-    author.id,
+    shared.me.id,
     backendModelName,
     "assistant",
     modelResponse,
