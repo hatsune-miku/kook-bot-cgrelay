@@ -67,7 +67,7 @@ export class Requests {
       method: method
     }
 
-    if (method === "POST" || method === "PUT") {
+    if (method === "POST" || method === "PUT" || method === "DELETE") {
       request.body = JSON.stringify(requestData)
     } else {
       url += "?" + queryFromObject(requestData)
