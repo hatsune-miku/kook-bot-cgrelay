@@ -22,6 +22,7 @@ import { Requests } from "../../utils/krequest/request"
 import WebSocket from "ws"
 import { decompressKMessage } from "../../utils/deflate/deflate"
 import { KMessageQueue } from "../../utils/pqueue/kmqueue"
+import { tryit } from "radash"
 
 /**
  * KOOK WebSocket connection helper
@@ -205,13 +206,14 @@ export class KWSHelper {
 
     const tryReconnect = async () => {
       // 重连连接 Gateway
-      const result = await Requests.openGateway({
+      const [err, result] = await tryit(Requests.openGateway)({
         compress: this.compression,
         fromDisconnect: true,
         lastProcessedSn: this.lastSn,
         lastSessionId: this.lastSessionId
       })
-      if (!result.success) {
+
+      if (err || !result.success) {
         // 重连失败，按照指数回退重试
         this.handleOpenGatewayInfiniteRetry(
           Math.min(duration * 2, this.options.infiniteRetryDelayMaximum)
