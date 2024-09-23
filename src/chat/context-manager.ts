@@ -26,8 +26,10 @@ export class ContextManager {
       const context = userIdToContexts[userId]
       for (const unit of context) {
         if (!unit.freeChat || includesFreeChat) {
-          unit.name = `${unit.name} (id=${userId})`
-          units.push(unit)
+          units.push({
+            ...unit,
+            name: `${unit.name} (id=${userId})`
+          })
         }
       }
     }
