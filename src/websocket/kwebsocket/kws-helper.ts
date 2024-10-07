@@ -17,7 +17,7 @@ import {
   KTextChannelExtra,
   KWSState
 } from "./types"
-import { info, warn } from "../../utils/logging/logger"
+import { error, info, warn } from "../../utils/logging/logger"
 import { Requests } from "../../utils/krequest/request"
 import WebSocket from "ws"
 import { decompressKMessage } from "../../utils/deflate/deflate"
@@ -215,6 +215,13 @@ export class KWSHelper {
 
       if (err || !result.success) {
         // 重连失败，按照指数回退重试
+        error(
+          "Failed to open gateway during an infinite retry",
+          err,
+          JSON.stringify(err),
+          result,
+          result ? result.message : ""
+        )
         this.handleOpenGatewayInfiniteRetry(
           Math.min(duration * 2, this.options.infiniteRetryDelayMaximum)
         )
