@@ -206,7 +206,7 @@ export class KWSHelper {
 
     const tryReconnect = async () => {
       // 重连连接 Gateway
-      const [err, result] = await tryit(Requests.openGateway)({
+      const [err, result] = await tryit(Requests.openGateway.bind(this))({
         compress: this.compression,
         fromDisconnect: true,
         lastProcessedSn: this.lastSn,
