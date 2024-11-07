@@ -311,7 +311,10 @@ export class ChatDirectivesManager {
 
     const method = parameters[0]
     const endpoint = parameters[1]
-    const args = parameters.slice(2).join(" ")
+    const args = parameters
+      .slice(2)
+      .join(" ")
+      .replace(/\\\\\"/g, '\\"')
     let parsed: unknown
 
     try {
