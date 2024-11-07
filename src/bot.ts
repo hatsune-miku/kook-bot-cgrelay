@@ -125,8 +125,13 @@ function handleSevereError(message: string) {
 }
 
 async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
-  const guildId = event.extra.guild_id
+  const guildId = event.extra?.guild_id
   const channelId = event.target_id
+
+  if (!guildId) {
+    return
+  }
+
   const myRoles = await roleManager.getMyRolesAt(guildId, shared.me.id)
   const isSentByMe = event.author_id == shared.me.id
 
