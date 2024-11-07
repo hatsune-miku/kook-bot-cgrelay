@@ -1,5 +1,5 @@
 import { EventEmitter } from "stream"
-import { info, warn } from "../utils/logging/logger"
+import { error, info, warn } from "../utils/logging/logger"
 import { KEvent, KTextChannelExtra, KUser } from "../websocket/kwebsocket/types"
 import { Events, KCardMessage, RespondToUserParameters } from "../events"
 import { displayNameFromUser, isTrustedUser } from "../utils"
@@ -317,6 +317,7 @@ export class ChatDirectivesManager {
     try {
       parsed = JSON.parse(args)
     } catch {
+      error("Failed to parse JSON", args)
       this.respondToUser({
         originalEvent: event.originalEvent,
         content: "eval 内容解析失败~"
