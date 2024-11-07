@@ -255,7 +255,16 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
 
   const updateResult = await performUpdateMessage()
 
-  if (!updateResult.success) {
+  if (!updateResult.success || updateResult.code !== 0) {
+    Requests.updateChannelMessage({
+      msg_id: createdMessage.msg_id,
+      content: `刚才的消息没能发成功，因为【${updateResult.message}】~`,
+      quote: event.msg_id,
+      extra: {
+        type: KEventType.KMarkdown,
+        target_id: event.target_id
+      }
+    })
     error(
       "Failed to update message",
       createdMessage.msg_id,
