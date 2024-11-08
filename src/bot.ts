@@ -28,6 +28,7 @@ import { Events, RespondToUserParameters } from "./events"
 import { displayNameFromUser, isTrustedUser } from "./utils"
 import ConfigUtils from "./utils/config/config"
 import { ChatBotBackend, ContextUnit, GroupChatStrategy } from "./chat/types"
+import { CardBuilder } from "./helpers/card-helper"
 
 ConfigUtils.initialize()
 
@@ -203,9 +204,14 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   }
 
   const sendResult = await Requests.createChannelMessage({
-    type: KEventType.KMarkdown,
+    type: KEventType.Card,
     target_id: event.target_id,
-    content: "[:111miku:3553226959/42829/gJ7IgeHpHN0rt0rx] miku打字中...",
+    content: CardBuilder.fromTemplate()
+      .addIconWithText(
+        "https://img.kookapp.cn/assets/2024-11/08/j9AUs4J16i04s04y.png",
+        "miku打字中..."
+      )
+      .build(),
     quote: event.msg_id
   })
 
@@ -250,7 +256,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const performUpdateMessage = () =>
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
-      content: modelResponse,
+      content: CardBuilder.fromTemplate().addPlainText(modelResponse).build(),
       quote: event.msg_id,
       extra: {
         type: KEventType.KMarkdown,
@@ -263,7 +269,9 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   if (!updateResult.success || updateResult.code !== 0) {
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
-      content: `刚才的消息没能发成功，因为【${updateResult.message}】~`,
+      content: CardBuilder.fromTemplate()
+        .addPlainText(`刚才的消息没能发成功，因为【${updateResult.message}】~`)
+        .build(),
       quote: event.msg_id,
       extra: {
         type: KEventType.KMarkdown,

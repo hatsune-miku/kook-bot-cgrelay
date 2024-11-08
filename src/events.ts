@@ -10,9 +10,11 @@ export interface RespondToUserParameters {
   content: string
 }
 
+export type KCardSize = "sm" | "md" | "lg"
+
 export interface KCardMessageSubTextElement {
   // TODO
-  type: "kmarkdown"
+  type: "kmarkdown" | "plain-text"
   content: string
 }
 
@@ -20,20 +22,24 @@ export interface KCardMessageContainedElement {
   // TODO
   type: "image"
   src?: string
+  size?: KCardSize
 }
 export interface KCardMessageSubElement {
   // TODO
   type: "section" | "container"
   text?: KCardMessageSubTextElement
+  mode?: string
+  accessory?: KCardMessageContainedElement
   elements?: KCardMessageContainedElement[]
 }
 
 export interface KCardMessageElement {
   // TODO
   type: "card" | "container"
-  theme: "primary" | "secondary"
-  size: "sm" | "md" | "lg"
+  theme: "primary" | "secondary" | "invisible"
+  size: KCardSize
+  color?: string
   modules: KCardMessageSubElement[]
 }
 
-export type KCardMessage = KCardMessageElement[]
+export type KCardMessage = [KCardMessageElement]
