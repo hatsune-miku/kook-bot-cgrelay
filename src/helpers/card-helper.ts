@@ -3,7 +3,7 @@ import { KCardMessage, KCardMessageElement, KCardSize } from "../events"
 export class CardHelper {}
 
 export interface CardBuilderTemplateOptions {
-  initialCard?: Omit<KCardMessage[0], "modules">
+  initialCard?: Partial<Omit<KCardMessage[0], "modules">>
 }
 
 export class CardBuilder {
@@ -24,7 +24,11 @@ export class CardBuilder {
     }
   }
 
-  static fromTemplate(options: CardBuilderTemplateOptions = {}) {
+  static fromTemplate(
+    options: CardBuilderTemplateOptions = {
+      initialCard: { theme: "invisible" }
+    }
+  ) {
     return new CardBuilder(options)
   }
 

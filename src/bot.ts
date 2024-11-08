@@ -256,7 +256,13 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const performUpdateMessage = () =>
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
-      content: CardBuilder.fromTemplate().addPlainText(modelResponse).build(),
+      content: CardBuilder.fromTemplate()
+        .addIconWithText(
+          "https://img.kookapp.cn/assets/2024-11/08/j9AUs4J16i04s04y.png",
+          ""
+        )
+        .addPlainText(modelResponse)
+        .build(),
       quote: event.msg_id,
       extra: {
         type: KEventType.KMarkdown,
@@ -270,6 +276,10 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
       content: CardBuilder.fromTemplate()
+        .addIconWithText(
+          "https://img.kookapp.cn/assets/2024-11/08/j9AUs4J16i04s04y.png",
+          "消息发送失败了！"
+        )
         .addPlainText(`刚才的消息没能发成功，因为【${updateResult.message}】~`)
         .build(),
       quote: event.msg_id,
