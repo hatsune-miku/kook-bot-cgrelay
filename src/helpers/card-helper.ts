@@ -26,7 +26,7 @@ export class CardBuilder {
 
   static fromTemplate(
     options: CardBuilderTemplateOptions = {
-      initialCard: { theme: "invisible" }
+      initialCard: { theme: "secondary" }
     }
   ) {
     return new CardBuilder(options)
