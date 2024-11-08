@@ -218,6 +218,8 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   if (!sendResult.success) {
     error("Failed to respond to", displayName, "reason:", sendResult.message)
     return
+  } else {
+    info("Successfully responded to", displayName, sendResult)
   }
 
   const isGroupChat = groupChatStrategy !== GroupChatStrategy.Off
