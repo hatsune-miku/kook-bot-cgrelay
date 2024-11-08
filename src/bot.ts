@@ -205,7 +205,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   const sendResult = await Requests.createChannelMessage({
     type: KEventType.KMarkdown,
     target_id: event.target_id,
-    content: "miku打字中...",
+    content: "[:111miku:3553226959/42829/gJ7IgeHpHN0rt0rx] miku打字中...",
     quote: event.msg_id
   })
 
@@ -241,7 +241,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     guildId,
     channelId,
     shared.me.id,
-    backendModelName,
+    "Miku",
     "assistant",
     modelResponse,
     false
