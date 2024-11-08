@@ -64,6 +64,17 @@ export class CardBuilder {
     return this
   }
 
+  addKMarkdownText(content: string) {
+    this.modules.push({
+      type: "section",
+      text: {
+        type: "kmarkdown",
+        content: content
+      }
+    })
+    return this
+  }
+
   addPlainText(text: string) {
     this.modules.push({
       type: "section",

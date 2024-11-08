@@ -263,7 +263,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
           "https://img.kookapp.cn/assets/2024-11/08/j9AUs4J16i04s04y.png",
           ""
         )
-        .addPlainText(modelResponse)
+        .addKMarkdownText(modelResponse)
         .build(),
       quote: event.msg_id,
       extra: {
@@ -282,7 +282,9 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
           "https://img.kookapp.cn/assets/2024-11/08/j9AUs4J16i04s04y.png",
           "消息发送失败了！"
         )
-        .addPlainText(`刚才的消息没能发成功，因为【${updateResult.message}】~`)
+        .addKMarkdownText(
+          `刚才的消息没能发成功，因为【${updateResult.message}】~`
+        )
         .build(),
       quote: event.msg_id,
       extra: {
