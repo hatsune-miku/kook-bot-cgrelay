@@ -49,7 +49,8 @@ export default class YukiCommandSession {
     return {
       define: this._handleDefine.bind(this),
       sleep: this._handleSleep.bind(this),
-      script: this._handleScript.bind(this)
+      script: this._handleScript.bind(this),
+      help: this._handleHelp.bind(this)
     }
   }
 
@@ -113,6 +114,38 @@ export default class YukiCommandSession {
     }
 
     return await this.interpretUserDefinedCommand()
+  }
+
+  async _handleHelp() {
+    this.chatManager.respondCardMessageToUser({
+      originalEvent: this.context.event.originalEvent,
+      content: CardBuilder.fromTemplate()
+        .addIconWithText(CardIcons.MikuCute, "指令说明~")
+        .addPlainText("/yuki 系列指令是用来执行一些自动化操作的。")
+        .addIconWithText(CardIcons.MikuHappy, "/yuki /define [函数名] [函数体]")
+        .addKMarkdownText(
+          "定义一个函数，函数体是另一个指令，例如 `/yuki /define /query_me /query $authorId$`。"
+        )
+        .addIconWithText(CardIcons.MikuHappy, "/yuki /sleep [毫秒数]")
+        .addKMarkdownText("等待，例如 `/yuki /sleep 1000`。")
+        .addIconWithText(
+          CardIcons.MikuHappy,
+          '/yuki /script ["指令1", "指令2", ...]'
+        )
+        .addKMarkdownText(
+          '顺序执行若干指令，例如 `/yuki /script ["/sleep 1000", "/query_me"]`。'
+        )
+        .build()
+    })
+    this.chatManager.respondCardMessageToUser({
+      originalEvent: this.context.event.originalEvent,
+      content: CardBuilder.fromTemplate()
+        .addIconWithText(CardIcons.MikuCute, "可用的宏~")
+        .addPlainText("$currentGuildId$: 当前服务器 ID")
+        .addPlainText("$currentChannelId$: 当前频道 ID")
+        .addPlainText("$authorId$: 当前用户 ID")
+        .build()
+    })
   }
 
   private async _handleSleep() {
