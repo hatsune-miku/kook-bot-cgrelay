@@ -90,3 +90,11 @@ export class CardBuilder {
     return JSON.stringify(this.card)
   }
 }
+
+export const CardIcons = {
+  MikuCry:
+    "https://img.kookapp.cn/emojis/3553226959/42829/7ydOiupsN90m80mb.png",
+  MikuCute:
+    "https://img.kookapp.cn/emojis/3553226959/42829/gJ7IgeHpHN0rt0rx.png",
+  MikuSad: "https://img.kookapp.cn/emojis/3553226959/42829/OhGpZwVWpm0dw0dz.png"
+}

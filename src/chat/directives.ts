@@ -8,8 +8,10 @@ import { map } from "radash"
 import ConfigUtils from "../utils/config/config"
 import { ContextManager } from "./context-manager"
 import { ChatBotBackend, ContextUnit, GroupChatStrategy } from "./types"
+import { IChatDirectivesManager } from "./interfaces"
+import yukiSubCommandHandler from "./yuki/handler"
 
-export class ChatDirectivesManager {
+export class ChatDirectivesManager implements IChatDirectivesManager {
   private guildIdToUserIdToProperties = new Map<
     string,
     Map<string, UserProperties>
@@ -499,6 +501,10 @@ export class ChatDirectivesManager {
     })
   }
 
+  async handleSubcommand(event: ParseEventResultValid) {
+    return yukiSubCommandHandler(this, event)
+  }
+
   async showWhitelist(event: ParseEventResultValid) {
     const guilds = ConfigUtils.getGlobalConfig().whiteListedGuildIds ?? {}
     this.respondToUser({
@@ -648,7 +654,7 @@ export class ChatDirectivesManager {
     }
   }
 
-  dispatchDirectives(parsedEvent: ParseEventResultValid) {
+  dispatchDirectives(parsedEvent: ParseEventResultValid): boolean {
     const { directive } = parsedEvent
     const builtinDirectives = prepareBuiltinDirectives(this)
     const directiveItem = builtinDirectives.find(
@@ -656,7 +662,7 @@ export class ChatDirectivesManager {
     )
     if (!directiveItem) {
       warn("Match failed", directiveItem)
-      return
+      return false
     }
     if (!directiveItem.permissionGroups.includes("everyone")) {
       if (!isTrustedUser(parsedEvent.userProperties.metadata.id)) {
@@ -669,11 +675,12 @@ export class ChatDirectivesManager {
             originalEvent: parsedEvent.originalEvent,
             content: "权限不足，无法完成操作"
           })
-          return
+          return true
         }
       }
     }
     directiveItem.handler(parsedEvent)
+    return true
   }
 }
 
@@ -797,12 +804,12 @@ function prepareBuiltinDirectives(
       handler: manager.showWhitelist.bind(manager)
     },
     {
-      triggerWord: "unwhitelist",
-      parameterDescription: "<guild-id>",
-      description: "将指定服务器移出白名单",
+      triggerWord: "yuki",
+      parameterDescription: "",
+      description: "Yuki Subcommands",
       defaultValue: undefined,
-      permissionGroups: ["admin"],
-      handler: manager.handleUnwhitelistGuild.bind
+      permissionGroups: ["everyone"],
+      handler: manager.handleSubcommand.bind(manager)
     }
   ]
 }

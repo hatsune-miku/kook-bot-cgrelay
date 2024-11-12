@@ -103,6 +103,7 @@ export interface GuildScopeConfig {
   channels?: {
     [channelId: string]: ChannelScopeConfig | undefined
   }
+  userDefinedScripts?: Record<string, string>
 }
 
 export interface ChannelScopeConfig {
