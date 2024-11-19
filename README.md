@@ -9,13 +9,16 @@
 
 ## Features
 
-- 兼容访问速率限制
-- 兼容 WebSocket Bot 重连机制
-- 能够处理 WebSocket 消息乱序
 - 对话上下文
 - 跨用户对话上下文
 - 指令支持
-- 支持 Deflate 压缩
+- Yuki 系列 API
+  - 测试工具
+  - 动态指令定义
+  - 更多
+- 能够处理 KOOK WebSocket 消息乱序
+- 兼容 KOOK 访问速率限制
+- 兼容 KOOK WebSocket Bot 重连机制
 
 ## 示例：群聊模式
 
