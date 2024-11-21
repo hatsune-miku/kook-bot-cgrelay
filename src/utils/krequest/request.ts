@@ -27,8 +27,8 @@ import { die } from "../server/die"
 import { MessageLengthUpperBound } from "../config/config"
 import { sleep } from "radash"
 
-// export const BASE_URL = "https://www.kookapp.cn/"
-export const BASE_URL = "https://tttt-www.dev.chuanyuapp.com/"
+export const BASE_URL = "https://www.kookapp.cn/"
+// export const BASE_URL = "https://tttt-www.dev.chuanyuapp.com/"
 export const AUTHORIZATION = `Bot ${Env.BotToken}`
 
 export type RequestMethod = "GET" | "POST" | "PUT" | "DELETE"
