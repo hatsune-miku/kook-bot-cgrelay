@@ -244,17 +244,6 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
           )
   const modelResponse = await backend(isGroupChat, context)
 
-  info("model response", modelResponse)
-  contextManager.appendToContext(
-    guildId,
-    channelId,
-    shared.me.id,
-    "Miku",
-    "assistant",
-    modelResponse,
-    false
-  )
-
   const performUpdateMessage = () =>
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
@@ -273,8 +262,24 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     })
 
   const updateResult = await performUpdateMessage()
+  const isUpdateMessageSuccess = updateResult.success && updateResult.code === 0
+  const updateMessageErrorMessage = isUpdateMessageSuccess
+    ? null
+    : updateResult.message
+  const userSideErrorMessage = `刚才的消息没能发送成功，因为【${updateMessageErrorMessage}】~`
 
-  if (!updateResult.success || updateResult.code !== 0) {
+  info("model response", modelResponse)
+  contextManager.appendToContext(
+    guildId,
+    channelId,
+    shared.me.id,
+    "Miku",
+    "assistant",
+    isUpdateMessageSuccess ? modelResponse : userSideErrorMessage,
+    false
+  )
+
+  if (!isUpdateMessageSuccess) {
     Requests.updateChannelMessage({
       msg_id: createdMessage.msg_id,
       content: CardBuilder.fromTemplate()
@@ -282,9 +287,7 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
           "https://img.kookapp.cn/assets/2024-11/08/j9AUs4J16i04s04y.png",
           "消息发送失败了！"
         )
-        .addKMarkdownText(
-          `刚才的消息没能发成功，因为【${updateResult.message}】~`
-        )
+        .addKMarkdownText(userSideErrorMessage)
         .build(),
       quote: event.msg_id,
       extra: {
