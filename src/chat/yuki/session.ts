@@ -25,21 +25,6 @@ export default class YukiCommandSession {
     context: YukiContext
   ) {
     this.context = context
-
-    // 替换常量
-    const constantsMap = {
-      currentGuildId: this.context.guildId,
-      currentChannelId: this.context.channelId,
-      authorId: this.context.author.id
-    }
-    invocation.parameters = invocation.parameters.map((parameter) => {
-      for (const [key, value] of Object.entries(constantsMap)) {
-        const pattern = new RegExp(`\\$${key}\\$`, "g")
-        parameter = parameter.replace(pattern, value)
-      }
-      return parameter
-    })
-
     this.chatManager = chatManager
     this.invocation = invocation
     this.builtinCommands = this.prepareBuiltinCommands()
@@ -99,6 +84,23 @@ export default class YukiCommandSession {
   }
 
   async interpretInvocation() {
+    // 替换常量
+    const constantsMap = {
+      currentGuildId: this.context.guildId,
+      currentChannelId: this.context.channelId,
+      authorId: this.context.author.id
+    }
+
+    this.invocation.parsedParameters = this.invocation.parameters.map(
+      (parameter) => {
+        for (const [key, value] of Object.entries(constantsMap)) {
+          const pattern = new RegExp(`\\$${key}\\$`, "g")
+          parameter = parameter.replace(pattern, value)
+        }
+        return parameter
+      }
+    )
+
     const awaitble = this.builtinCommands[this.invocation.directive]
     if (awaitble) {
       return await awaitble()
@@ -166,7 +168,7 @@ export default class YukiCommandSession {
   }
 
   private async _handleScript() {
-    let commandsSerialized = this.invocation.parameters.join(" ")
+    let commandsSerialized = this.invocation.parsedParameters?.join(" ")
     if (!commandsSerialized) {
       this.chatManager.respondCardMessageToUser({
         originalEvent: this.context.event.originalEvent,
@@ -215,7 +217,8 @@ export default class YukiCommandSession {
     const { guildId } = this.context
     const [commandName, commandBody] = takeAndVerifyParameters(
       this.invocation,
-      1
+      1,
+      { fillInTemplate: false }
     )
 
     if (!commandName || !commandBody) {

@@ -91,12 +91,12 @@ export class ChatDirectivesManager implements IChatDirectivesManager {
       ConfigUtils.updateGuildConfig(
         event.originalEvent.extra.guild_id,
         (config) => {
-          if (config && config.users) {
-            const userConfig = config.users[user.metadata.id]
-            if (userConfig) {
-              userConfig.roles = user.roles
-            }
+          if (!config) {
+            return config
           }
+          config.users ||= {}
+          config.users[user.metadata.id] ||= {}
+          config.users[user.metadata.id]!.roles = user.roles
           return config
         }
       )
@@ -573,7 +573,7 @@ export class ChatDirectivesManager implements IChatDirectivesManager {
     if (!userIdToProperties.has(user.id)) {
       userIdToProperties.set(user.id, {
         metadata: user,
-        roles: []
+        roles: ConfigUtils.getGuildConfig(guildId).users?.[user.id]?.roles ?? []
       })
     }
   }
@@ -661,7 +661,7 @@ export class ChatDirectivesManager implements IChatDirectivesManager {
       (d) => d.triggerWord === directive
     )
     if (!directiveItem) {
-      warn("Match failed", directiveItem)
+      warn("Match failed", directiveItem, directive)
       return false
     }
     if (!directiveItem.permissionGroups.includes("everyone")) {
