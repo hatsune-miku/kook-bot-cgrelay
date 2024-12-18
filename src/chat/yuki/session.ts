@@ -35,7 +35,8 @@ export default class YukiCommandSession {
       define: this._handleDefine.bind(this),
       sleep: this._handleSleep.bind(this),
       script: this._handleScript.bind(this),
-      help: this._handleHelp.bind(this)
+      help: this._handleHelp.bind(this),
+      echo: this._handleEcho.bind(this)
     }
   }
 
@@ -210,6 +211,16 @@ export default class YukiCommandSession {
         this.context
       )
       await subSession.interpretInvocation()
+    }
+  }
+
+  private async _handleEcho() {
+    const messages = takeAndVerifyParameters(this.invocation, 1)
+    if (messages.length > 0) {
+      this.chatManager.respondToUser({
+        originalEvent: this.context.event.originalEvent,
+        content: messages.join(" ")
+      })
     }
   }
 
