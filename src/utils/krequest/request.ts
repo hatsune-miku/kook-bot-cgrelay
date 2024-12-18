@@ -135,7 +135,7 @@ export class Requests {
       queryParams["session_id"] = props.lastSessionId
     }
 
-    return this.request("/api/v3/gateway/index", "GET", queryParams)
+    return Requests.request("/api/v3/gateway/index", "GET", queryParams)
   }
 
   static async reactToMessage(
