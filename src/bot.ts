@@ -305,6 +305,27 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
   }
 }
 
-function handleSystemEvent(_: KEvent<KSystemEventExtra>) {}
+function handleSystemEvent(event: KEvent<KSystemEventExtra>) {
+  const extra = event.extra
+  const guildId = event.target_id
+
+  if (!guildId) {
+    return
+  }
+
+  switch (extra.type) {
+    case "deleted_message": {
+      if (extra.body.channel_id && extra.body.msg_id) {
+        info("Deleted message", extra.body.msg_id)
+        contextManager.deleteMessageFromContext(
+          guildId,
+          extra.body.channel_id,
+          extra.body.msg_id
+        )
+      }
+      break
+    }
+  }
+}
 
 function handleReset() {}

@@ -38,10 +38,34 @@ export class ContextManager {
     return units
   }
 
+  deleteMessageFromContext(
+    guildId: string,
+    channelId: string,
+    messageId: string
+  ) {
+    ConfigUtils.updateChannelConfig(guildId, channelId, (config) => {
+      const userIdToContextUnits = config.userIdToContextUnits || {}
+      for (const userId of Object.keys(userIdToContextUnits)) {
+        const context = userIdToContextUnits[userId]
+        for (let i = 0; i < context.length; ++i) {
+          if (context[i].messageId === messageId) {
+            context.splice(i, 1)
+            break
+          }
+        }
+      }
+      return {
+        ...config,
+        userIdToContextUnits: userIdToContextUnits
+      }
+    })
+  }
+
   appendToContext(
     guildId: string,
     channelId: string,
     userId: string,
+    messageId: string,
     displayName: string,
     role: ContextUnit["role"],
     content: ContextUnit["content"],
@@ -50,6 +74,7 @@ export class ContextManager {
     const context = this.getContext(guildId, channelId, userId)
     context.push({
       id: userId,
+      messageId: messageId,
       role: role,
       name: displayName,
       content: content,

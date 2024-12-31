@@ -140,6 +140,10 @@ export class KWSHelper {
    */
   sendKMessage<T>(message: KMessage<T>) {
     const serialized = JSON.stringify(message)
+    if (this.webSocket?.readyState !== WebSocket.OPEN) {
+      warn("WebSocket is not ready to send message", serialized)
+      return
+    }
     this.webSocket?.send(serialized)
   }
 

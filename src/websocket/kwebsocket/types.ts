@@ -154,7 +154,14 @@ export interface KTextChannelExtra {
   author: KUser
 }
 
-export interface KSystemEventExtra {
-  type: string // TODO: 是啥
-  body: any // TODO: 系统消息事件
+// https://developer.kookapp.cn/doc/event/event-introduction
+export type KSystemEventExtra = KDeletedMessageSystemEventExtra
+
+export interface KDeletedMessageSystemEventExtra {
+  type: "deleted_message"
+  body: {
+    msg_id: string
+    channel_id: string
+    channel_type: number
+  }
 }
