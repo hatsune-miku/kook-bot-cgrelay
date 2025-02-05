@@ -352,8 +352,9 @@ export class ChatDirectivesManager implements IChatDirectivesManager {
         ChatBotBackend.GPT4,
         ChatBotBackend.GPT4o,
         ChatBotBackend.GPT4Turbo,
-        ChatBotBackend.GPT4o2024,
-        ChatBotBackend.GPT4Turbo2024
+        ChatBotBackend.O1,
+        ChatBotBackend.O1Mini,
+        ChatBotBackend.O3Mini
       ].includes(backend as ChatBotBackend)
     ) {
       ConfigUtils.updateChannelConfig(
