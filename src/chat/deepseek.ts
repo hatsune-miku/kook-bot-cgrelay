@@ -18,18 +18,17 @@ function makeContext(
 ): ChatCompletionMessageParam[] {
   if (groupChat) {
     const units = context.map((unit) => ({
-      role: unit.role === "user" ? "system" : "assistant",
-      content:
-        unit.role === "user"
-          ? `${unit.name}(id=${unit.id})说: ${unit.content}`
-          : unit.content
+      role: unit.role === "user" ? "user" : "assistant",
+      name: `${unit.name}(id=${unit.id})`,
+      content: unit.content
     }))
     return [
       {
         role: "system",
-        content: `你是DeepSeek LLM。请你作为通讯平台KOOK的群聊成员"Miku"，参与大家的讨论。
-          - 请总是给对话的最后一条以适当关注，那可能是用户对你的提问
-          - 优先使用全角波浪号代替感叹号，但不要全代替
+        content: `请你作为KOOK平台的群聊成员Miku参与讨论。注意：
+          - 对话的最后一条是用户对你的提问
+          - 语气不宜浮夸，宜接近作为AI的严谨风格，但不必太严谨
+          - 优先使用全角波浪号代替感叹号，不超过2次
           - 若需要输出 Markdown，则下列额外规则适用：
               - 请勿使用 #, ##, ###
               - 必须使用半角括号
