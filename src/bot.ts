@@ -8,6 +8,7 @@
 
 import { ContextManager } from "./chat/context-manager"
 import { chatCompletionWithoutStream as chatCompletionWithoutStreamChatGPT } from "./chat/openai"
+import { chatCompletionWithoutStream as chatCompletionWithoutStreamDeepSeek } from "./chat/deepseek"
 import { chatCompletionWithoutStream as chatCompletionWithoutStreamErnie } from "./chat/ernie"
 import { ChatDirectivesManager } from "./chat/directives"
 import { shared } from "./global/shared"
@@ -233,10 +234,17 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
     guildId,
     channelId
   )
+  const backendConfig = directivesManager.getChatBotBackend(guildId, channelId)
   const backend =
-    directivesManager.getChatBotBackend(guildId, channelId) ===
-    ChatBotBackend.Ernie
+    backendConfig === ChatBotBackend.Ernie
       ? chatCompletionWithoutStreamErnie
+      : backendConfig.startsWith("deepseek")
+      ? (groupChat: boolean, context: ContextUnit[]) =>
+          chatCompletionWithoutStreamDeepSeek(
+            groupChat,
+            context,
+            backendModelName
+          )
       : (groupChat: boolean, context: ContextUnit[]) =>
           chatCompletionWithoutStreamChatGPT(
             groupChat,

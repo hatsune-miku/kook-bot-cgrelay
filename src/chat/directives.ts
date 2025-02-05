@@ -371,6 +371,21 @@ export class ChatDirectivesManager implements IChatDirectivesManager {
         originalEvent: event.originalEvent,
         content: `已切换至 ChatGPT (${backend})`
       })
+    } else if (backend?.startsWith("deepseek")) {
+      ConfigUtils.updateChannelConfig(
+        event.originalEvent.extra.guild_id,
+        event.originalEvent.target_id,
+        (config) => {
+          return {
+            ...config,
+            backend: backend as ChatBotBackend
+          }
+        }
+      )
+      this.respondToUser({
+        originalEvent: event.originalEvent,
+        content: `已切换至 DeepSeek (${backend})`
+      })
     } else if (backend === ChatBotBackend.Ernie) {
       ConfigUtils.updateChannelConfig(
         event.originalEvent.extra.guild_id,
