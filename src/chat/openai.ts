@@ -18,9 +18,8 @@ function makeContext(
 ): ChatCompletionMessageParam[] {
   if (groupChat) {
     const units = context.map((unit) => ({
-      role: unit.role === "user" ? "user" : "assistant",
-      name: `${unit.name}(id=${unit.id})`,
-      content: unit.content
+      role: unit.role === "user" ? "system" : "assistant",
+      content: `${unit.name}(id=${unit.id})说: ${unit.content}`
     }))
     return [
       {
