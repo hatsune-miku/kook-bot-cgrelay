@@ -67,7 +67,18 @@ export async function chatCompletionWithoutStream(
       model: model
     })
 
-    return completion.choices[0].message.content ?? "<no content>"
+    const message = completion.choices[0].message
+    const reasoningContent =
+      "reasoning_content" in message ? message.reasoning_content : null
+
+    if (message.content) {
+      if (reasoningContent) {
+        return `${reasoningContent}\n\n${message.content}`
+      }
+      return message.content
+    } else {
+      return "<no content>"
+    }
   } catch (e) {
     console.error(e)
     return "<与 DeepSeek 的连接超时>"
