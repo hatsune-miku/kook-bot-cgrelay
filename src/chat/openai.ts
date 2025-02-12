@@ -17,6 +17,7 @@ import {
 } from "./functional/default-tools"
 import { KEvent, KTextChannelExtra } from "../websocket/kwebsocket/types"
 import { ChatDirectivesManager } from "./directives"
+import { info } from "console"
 
 const CONSECUTIVE_FUNCTION_CALLS_THRESHOLD = 6
 
@@ -94,6 +95,8 @@ export async function chatCompletionWithoutStream(
       if (--functionCallDepthRemaining <= 0) {
         return "<OpenAI 的回复过于复杂，无法处理>"
       }
+
+      info(`[Chat] Function calls`, toolCalls)
 
       if (toolCalls && Array.isArray(toolCalls)) {
         for (const toolCall of toolCalls) {

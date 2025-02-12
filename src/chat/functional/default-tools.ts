@@ -2,6 +2,7 @@ import { ChatCompletionTool, FunctionParameters } from "openai/resources"
 import { CardBuilder } from "../../helpers/card-helper"
 import { ChatDirectivesManager } from "../directives"
 import { KEvent, KTextChannelExtra } from "../../websocket/kwebsocket/types"
+import { info } from "../../utils/logging/logger"
 
 export const SetCountdownParameters: FunctionParameters = {
   type: "object",
@@ -31,14 +32,18 @@ export const DefaultChatFunctions = {
   async setCountdown(
     originalEvent: KEvent<KTextChannelExtra>,
     directivesManager: ChatDirectivesManager,
-    { time }: { time: number }
+    args: any
   ) {
+    info(`[Chat] Set countdown`, args)
+    const { time } = args
+
     const endAt = Date.now() + time
     const card = CardBuilder.fromTemplate().addHourCountDown(endAt).build()
     directivesManager.respondCardMessageToUser({
       originalEvent,
       content: card
     })
+    info(`[Chat] Set countdown to ${endAt}, ${originalEvent}`)
     return "OK"
   }
 }
