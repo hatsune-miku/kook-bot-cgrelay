@@ -43,7 +43,7 @@ export const DefaultChatFunctions = {
       originalEvent,
       content: card
     })
-    info(`[Chat] Set countdown to ${endAt}, ${originalEvent}`)
+    info(`[Chat] Set countdown to`, endAt, originalEvent)
     return "OK"
   }
 }
@@ -54,12 +54,19 @@ export async function invokeToolFunction<T = any>(
   name: string,
   params: any
 ): Promise<T | null> {
+  let args = {}
+  try {
+    args = JSON.parse(params)
+  } catch {
+    return null
+  }
+
   switch (name) {
     case "setCountdown":
       return (await DefaultChatFunctions.setCountdown(
         originalEvent,
         directivesManager,
-        params
+        args
       )) as T
 
     default:
