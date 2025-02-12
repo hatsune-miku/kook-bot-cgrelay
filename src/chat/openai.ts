@@ -81,6 +81,8 @@ export async function chatCompletionWithoutStream(
         return "<无法获取 OpenAI 的回复>"
       }
 
+      messages.push(responseMessage)
+
       const toolCalls = responseMessage.tool_calls
       functionsFulfilled =
         !toolCalls || !Array.isArray(toolCalls) || toolCalls.length === 0
