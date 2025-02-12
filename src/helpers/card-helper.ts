@@ -11,7 +11,7 @@ export class CardBuilder {
     {
       type: "card",
       theme: "secondary",
-      size: "sm",
+      size: "lg",
       modules: []
     }
   ]
