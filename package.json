@@ -19,7 +19,7 @@
     "express": "^4.19.2",
     "luxon": "^3.4.4",
     "node-fetch": "2",
-    "openai": "^4.47.1",
+    "openai": "^4.8.0",
     "pako": "^2.1.0",
     "radash": "^12.1.0",
     "ts-node": "^10.9.2",

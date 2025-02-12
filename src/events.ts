@@ -26,11 +26,12 @@ export interface KCardMessageContainedElement {
 }
 export interface KCardMessageSubElement {
   // TODO
-  type: "section" | "container"
+  type: string
   text?: KCardMessageSubTextElement
   mode?: string
   accessory?: KCardMessageContainedElement
   elements?: KCardMessageContainedElement[]
+  [key: string]: any
 }
 
 export interface KCardMessageElement {

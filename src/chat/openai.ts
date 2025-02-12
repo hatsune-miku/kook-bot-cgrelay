@@ -11,6 +11,14 @@ import { Env } from "../utils/env/env"
 import { draw } from "radash"
 import { ChatCompletionMessageParam } from "openai/resources"
 import { ContextUnit } from "./types"
+import {
+  DefaultChatCompletionTools,
+  invokeToolFunction
+} from "./functional/default-tools"
+import { KEvent, KTextChannelExtra } from "../websocket/kwebsocket/types"
+import { ChatDirectivesManager } from "./directives"
+
+const CONSECUTIVE_FUNCTION_CALLS_THRESHOLD = 6
 
 function makeContext(
   groupChat: boolean,
@@ -45,6 +53,8 @@ function makeContext(
 }
 
 export async function chatCompletionWithoutStream(
+  event: KEvent<KTextChannelExtra>,
+  directivesManager: ChatDirectivesManager,
   groupChat: boolean,
   context: ContextUnit[],
   model: string
@@ -56,12 +66,50 @@ export async function chatCompletionWithoutStream(
   let messages = makeContext(groupChat, context)
 
   try {
-    const completion = await openai.chat.completions.create({
-      messages: messages,
-      model: model
-    })
+    let functionsFulfilled = false
+    let functionCallDepthRemaining = CONSECUTIVE_FUNCTION_CALLS_THRESHOLD
 
-    return completion.choices[0].message.content ?? "<no content>"
+    while (!functionsFulfilled) {
+      const completion = await openai.chat.completions.create({
+        messages: messages,
+        model: model,
+        tools: DefaultChatCompletionTools
+      })
+
+      const responseMessage = completion.choices?.[0].message
+      if (!responseMessage) {
+        return "<无法获取 OpenAI 的回复>"
+      }
+
+      const toolCalls = responseMessage.tool_calls
+      functionsFulfilled =
+        !toolCalls || !Array.isArray(toolCalls) || toolCalls.length === 0
+
+      if (functionsFulfilled) {
+        return responseMessage.content || "<无法获取 OpenAI 的回复>"
+      }
+
+      if (--functionCallDepthRemaining <= 0) {
+        return "<OpenAI 的回复过于复杂，无法处理>"
+      }
+
+      if (toolCalls && Array.isArray(toolCalls)) {
+        for (const toolCall of toolCalls) {
+          const result = await invokeToolFunction(
+            event,
+            directivesManager,
+            toolCall.function.name,
+            toolCall.function.arguments
+          )
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: `${result}`
+          })
+        }
+      }
+    }
+    return "<无法获取 OpenAI 的回复>"
   } catch (e) {
     console.error(e)
     return "<与 OpenAI 的连接超时>"

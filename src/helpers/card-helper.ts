@@ -86,6 +86,15 @@ export class CardBuilder {
     return this
   }
 
+  addHourCountDown(endAt: number) {
+    this.modules.push({
+      type: "countdown",
+      mode: "hour",
+      endTime: endAt
+    })
+    return this
+  }
+
   build() {
     return JSON.stringify(this.card)
   }

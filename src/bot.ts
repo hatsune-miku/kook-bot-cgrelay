@@ -247,6 +247,8 @@ async function handleTextChannelEvent(event: KEvent<KTextChannelExtra>) {
           )
       : (groupChat: boolean, context: ContextUnit[]) =>
           chatCompletionWithoutStreamChatGPT(
+            event,
+            directivesManager,
             groupChat,
             context,
             backendModelName
