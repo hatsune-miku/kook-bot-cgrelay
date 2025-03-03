@@ -1,16 +1,17 @@
-# CGRelay - KOOK Bot
+# Miku - KOOK 机器人
 
 <p>
   <img src="doc/kook-badge.png" height="28px" />
   <img src="https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white" />
 </p>
 
-一个 KOOK WebSocket 机器人的练手项目。
+原本是一个 KOOK WebSocket 机器人的练习项目，如今已经可以满足日常使用需求~
 
-## Features
+## 功能
 
-- 对话上下文
-- 跨用户对话上下文
+- 群聊模式
+- ChatGPT/DALL-E/DeepSeek/Ernie 动态切换
+- OpenAI Function Calling
 - 指令支持
 - Yuki 系列 API
   - 测试工具
@@ -20,9 +21,31 @@
 - 兼容 KOOK 访问速率限制
 - 兼容 KOOK WebSocket Bot 重连机制
 
+## 示例：简单任务
+
+![Demo](doc/demo1.jpg)
+
+![Demo](doc/demo4.jpg)
+
+![Demo](doc/demo5.jpg)
+
+## 示例：看看天气
+
+![Demo](doc/demo6.jpg)
+
+## 示例：画点东西
+
+![Demo](doc/demo8.png)
+
+## 示例：做做运维
+
+![Demo](doc/demo7.jpg)
+
 ## 示例：群聊模式
 
 ![Demo](doc/demo2.png)
+
+![Demo](doc/demo9.png)
 
 ## 示例：指令系统
 
