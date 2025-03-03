@@ -10,8 +10,9 @@
 ## 功能
 
 - 群聊模式
-- ChatGPT/DALL-E/DeepSeek/Ernie 动态切换
+- ChatGPT/DeepSeek/Ernie 动态切换
 - OpenAI Function Calling
+- 接了一下 DALL-3
 - 指令支持
 - Yuki 系列 API
   - 测试工具
