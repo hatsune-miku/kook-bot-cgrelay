@@ -12,6 +12,7 @@ export class CardBuilder {
       type: "card",
       theme: "secondary",
       size: "lg",
+      color: "#fb7299",
       modules: []
     }
   ]
