@@ -77,6 +77,16 @@ export class CardBuilder {
     return this
   }
 
+  addFile(title: string, fileUrl: string, fileSize: number) {
+    this.modules.push({
+      type: "file",
+      title: title,
+      src: fileUrl,
+      size: `${fileSize}`
+    })
+    return this
+  }
+
   addKMarkdownText(content: string) {
     this.modules.push({
       type: "section",

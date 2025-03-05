@@ -20,9 +20,10 @@ export interface KCardMessageSubTextElement {
 
 export interface KCardMessageContainedElement {
   // TODO
-  type: "image"
+  type: "image" | "file"
+  title?: string
   src?: string
-  size?: KCardSize
+  size?: KCardSize | string
 }
 export interface KCardMessageSubElement {
   // TODO

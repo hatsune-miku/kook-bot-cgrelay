@@ -221,7 +221,7 @@ export class Requests {
     return this.request(`/api/v3/message/update`, "POST", props)
   }
 
-  static async uploadFile(path: string): Promise<string> {
+  static async uploadFile(path: string): Promise<[string, number]> {
     const fileData = new Blob([await readFile(path)], {
       type: lookup(path) || undefined
     })
@@ -237,7 +237,9 @@ export class Requests {
     )) as any as string
     info(`Upload file result: ${result}`, requestData, fileData)
     const resultParsed = JSON.parse(result)
-    return resultParsed.data?.url || ""
+    const url = resultParsed.data?.url || ""
+    const size = fileData.size
+    return [url, size]
   }
 
   static async querySelfUser(): Promise<KResponseExt<QuerySelfResult>> {

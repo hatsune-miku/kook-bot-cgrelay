@@ -91,7 +91,7 @@ export class DrawImageTool implements IFunctionTool {
 
     https.get(image.url, (response) => {
       const stream = createWriteStream(fileName).on("finish", async () => {
-        const url = await Requests.uploadFile(fileName)
+        const [url] = await Requests.uploadFile(fileName)
         const result = await context.directivesManager.respondCardMessageToUser(
           {
             originalEvent: context.event,
@@ -125,6 +125,6 @@ export class DrawImageTool implements IFunctionTool {
       return `发送消息失败: ${message}`
     }
 
-    return "Draw image success and sent to user"
+    return "已调用 drawImage 完成并发送了绘画"
   }
 }
