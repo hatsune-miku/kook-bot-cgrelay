@@ -81,6 +81,10 @@ function mapContextUnit(unit: ContextUnit): ChatCompletionMessageParam {
           url: src
         }
       })
+      ;(result.content as Array<ChatCompletionContentPart>).push({
+        type: "text",
+        text: "url of image above: " + src
+      })
     })
     return result
   } catch {
