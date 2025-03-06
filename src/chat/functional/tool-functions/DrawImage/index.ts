@@ -75,7 +75,7 @@ export class DrawImageTool implements IFunctionTool {
     const result = await openai.images.generate({
       prompt: prompt,
       model: "dall-e-3",
-      quality: "standard",
+      quality: "hd",
       response_format: "url",
       size: "1024x1024",
       style: "natural",
