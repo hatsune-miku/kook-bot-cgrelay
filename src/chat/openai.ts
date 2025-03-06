@@ -9,24 +9,91 @@
 import OpenAI from "openai"
 import { Env } from "../utils/env/env"
 import { draw } from "radash"
-import { ChatCompletionMessageParam } from "openai/resources"
+import {
+  ChatCompletionContentPart,
+  ChatCompletionMessageParam
+} from "openai/resources"
 import { ContextUnit } from "./types"
 import { info } from "console"
 import { getChatCompletionTools } from "./functional/tool-functions/dispatch"
 import { ToolFunctionContext } from "./functional/context"
 import { ToolFunctionInvoker } from "./functional/tool-function"
+import { KCardMessageElement, KCardMessageSubElement } from "../events"
 
 const CONSECUTIVE_FUNCTION_CALLS_THRESHOLD = 12
+
+function mapContextUnit(unit: ContextUnit): ChatCompletionMessageParam {
+  const normalUnit: ChatCompletionMessageParam = {
+    role: "user",
+    content: `${unit.name}(id=${unit.id})说: ${unit.content}`
+  }
+
+  let parsed: any
+  try {
+    parsed = JSON.parse(unit.content)
+  } catch {
+    // 不是JSON
+    return normalUnit
+  }
+
+  if (Array.isArray(parsed)) {
+    parsed = parsed[0]
+  }
+
+  if (!parsed) {
+    return normalUnit
+  }
+
+  const message = parsed as KCardMessageElement
+  const isCardMessage = message.type === "card" && message.theme?.length > 1
+  if (!isCardMessage) {
+    return normalUnit
+  }
+
+  const modules = message.modules
+  if (!Array.isArray(modules)) {
+    return normalUnit
+  }
+
+  const processModules = (
+    modules: KCardMessageSubElement[],
+    onImageFound: (src: string) => void
+  ) => {
+    for (const m of modules) {
+      if (m.type === "container") {
+        processModules(m.elements || [], onImageFound)
+      } else if (m.type === "image") {
+        onImageFound(m.src)
+      }
+    }
+  }
+
+  const result: ChatCompletionMessageParam = {
+    role: "user",
+    content: []
+  }
+
+  try {
+    processModules(modules, (src) => {
+      ;(result.content as Array<ChatCompletionContentPart>).push({
+        type: "image_url",
+        image_url: {
+          url: src
+        }
+      })
+    })
+    return result
+  } catch {
+    return normalUnit
+  }
+}
 
 function makeContext(
   groupChat: boolean,
   context: ContextUnit[]
 ): ChatCompletionMessageParam[] {
   if (groupChat) {
-    const units = context.map((unit) => ({
-      role: unit.role === "user" ? "user" : "assistant",
-      content: `${unit.name}(id=${unit.id})说: ${unit.content}`
-    }))
+    const units = context.map(mapContextUnit)
     return [
       {
         role: "system",
