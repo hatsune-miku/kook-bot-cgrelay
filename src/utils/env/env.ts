@@ -8,6 +8,7 @@ export const Env: EnvType = {
   BotToken: config.BOT_TOKEN || die("环境配置错误：BOT_TOKEN"),
   OpenAIKeys: config.OPENAI_API_KEYS?.split(",") || [],
   DeepSeekKeys: config.DEEPSEEK_API_KEYS?.split(",") || [],
+  StableDiffusionKeys: config.STABLE_DIFFUSION_API_KEYS?.split(",") || [],
   ErnieAccessKey:
     config.ERNIE_ACCESS_KEY || die("环境配置错误：ERNIE_ACCESS_KEY"),
   ErnieSecretKey:
@@ -24,6 +25,7 @@ export interface EnvType {
   BotToken: string
   OpenAIKeys: string[]
   DeepSeekKeys: string[]
+  StableDiffusionKeys: string[]
   ErnieAccessKey: string
   ErnieSecretKey: string
   QWeatherPrivateKey: string

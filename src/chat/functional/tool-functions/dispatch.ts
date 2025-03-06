@@ -12,6 +12,7 @@ import { EvaluatePythonTool } from "./EvaluatePython"
 import { ModerationCheckNoticeTextTool } from "./PromptModerationCheck"
 import { DrawImageTool } from "./DrawImage"
 import { SendFileTool } from "./SendFile"
+import { DrawImageStableDiffusionTool } from "./DrawImageStableDiffusion"
 
 export const toolFunctions: IFunctionTool[] = [
   SetCountdownTool,
@@ -23,7 +24,8 @@ export const toolFunctions: IFunctionTool[] = [
   DownloadFileTool,
   EvaluatePythonTool,
   ModerationCheckNoticeTextTool,
-  DrawImageTool,
+  // DrawImageTool,
+  DrawImageStableDiffusionTool,
   SendFileTool
 ].map((Tool) => new Tool())
 

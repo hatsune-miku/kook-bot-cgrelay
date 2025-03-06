@@ -16,7 +16,7 @@ import { getChatCompletionTools } from "./functional/tool-functions/dispatch"
 import { ToolFunctionContext } from "./functional/context"
 import { ToolFunctionInvoker } from "./functional/tool-function"
 
-const CONSECUTIVE_FUNCTION_CALLS_THRESHOLD = 6
+const CONSECUTIVE_FUNCTION_CALLS_THRESHOLD = 12
 
 function makeContext(
   groupChat: boolean,

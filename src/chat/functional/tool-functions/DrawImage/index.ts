@@ -10,7 +10,6 @@ import { KEventType } from "../../../../websocket/kwebsocket/types"
 import OpenAI from "openai"
 import { draw } from "radash"
 import { Env } from "../../../../utils/env/env"
-import { CreateDownloadUrlTool } from "../CreateDownloadUrl"
 import { shared } from "../../../../global/shared"
 
 export class DrawImageTool implements IFunctionTool {
