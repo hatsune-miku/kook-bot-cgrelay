@@ -54,7 +54,7 @@ export class DrawImageTool implements IFunctionTool {
     } = await context.directivesManager.respondCardMessageToUser({
       originalEvent: context.event,
       content: CardBuilder.fromTemplate()
-        .addIconWithKMarkdownText(CardIcons.MikuHappy, `Miku画画中...`)
+        .addIconWithKMarkdownText(CardIcons.MikuHappy, `miku画画中...`)
         .build()
     })
 
