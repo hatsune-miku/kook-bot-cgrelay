@@ -12,6 +12,7 @@
 - 群聊模式
 - ChatGPT/DeepSeek/Ernie 动态切换
 - OpenAI Function Calling
+- OpenAI Vision
 - 接了一下 DALL-3
 - 指令支持
 - Yuki 系列 API
@@ -29,6 +30,10 @@
 ![Demo](doc/demo4.jpg)
 
 ![Demo](doc/demo5.jpg)
+
+## 示例：视觉能力
+
+![Demo](doc/demo10.png)
 
 ## 示例：看看天气
 
