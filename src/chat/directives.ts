@@ -489,10 +489,7 @@ export class ChatDirectivesManager implements IChatDirectivesManager {
     this.respondCardMessageToUser({
       originalEvent: event.originalEvent,
       content: CardBuilder.fromTemplate()
-        .addIconWithKMarkdownText(
-          CardIcons.MikuCute,
-          `已遗忘当前服务器的当前频道对应的上下文`
-        )
+        .addIconWithKMarkdownText(CardIcons.MikuCute, `已开启新的对话上下文`)
         .build()
     })
     this.contextManager?.removeContext(guildId, channelId)
@@ -811,6 +808,14 @@ function prepareBuiltinDirectives(
     },
     {
       triggerWord: "obliviate",
+      parameterDescription: "",
+      description: "遗忘当前服务器的当前频道对应的上下文",
+      defaultValue: undefined,
+      permissionGroups: ["admin"],
+      handler: manager.handleObliviate.bind(manager)
+    },
+    {
+      triggerWord: "new",
       parameterDescription: "",
       description: "遗忘当前服务器的当前频道对应的上下文",
       defaultValue: undefined,
