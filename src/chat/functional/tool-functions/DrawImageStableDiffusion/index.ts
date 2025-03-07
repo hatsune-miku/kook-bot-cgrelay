@@ -19,7 +19,7 @@ export class DrawImageStableDiffusionTool implements IFunctionTool {
       function: {
         name: "drawImage",
         description:
-          "每当用户请求画图，你需要根据需求编写英文提示词，然后使用Stable Diffusion进行绘画。绘画之前，你需自行检查prompt，如果你认为内容不适当，应该拒绝绘画并通过getModerationCheckNoticeText来获取拦截文案。",
+          "用户请求画图时，你需要根据需求编写英文提示词。绘画之前，你需自行检查prompt，如果你认为内容不适当、不尊重特定人或群体，应该拒绝绘画并通过getModerationCheckNoticeText来获取拦截文案。",
         parameters: {
           type: "object",
           properties: {
