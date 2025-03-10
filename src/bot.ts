@@ -258,6 +258,7 @@ async function handleTextChannelTextMessage(event: KEvent<KTextChannelExtra>) {
       : backendConfig.startsWith("deepseek")
       ? (groupChat: boolean, context: ContextUnit[]) =>
           chatCompletionWithoutStreamDeepSeek(
+            toolFunctionContext,
             groupChat,
             context,
             backendModelName
