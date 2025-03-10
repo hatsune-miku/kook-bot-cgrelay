@@ -58,7 +58,7 @@ export default class YukiCommandSession {
     // 替换参数
     for (let i = 0; i < parameters.length; ++i) {
       info("Replacing parameter", i, `\\$arg${i}\\$`, parameters[i])
-      const pattern = new RegExp(`\\$arg${i}\\$`, "g")
+      const pattern = `$arg${i}$`
       commandBody = commandBody.replace(pattern, parameters[i])
     }
 
@@ -95,7 +95,7 @@ export default class YukiCommandSession {
     this.invocation.parsedParameters = this.invocation.parameters.map(
       (parameter) => {
         for (const [key, value] of Object.entries(constantsMap)) {
-          const pattern = new RegExp(`\\$${key}\\$`, "g")
+          const pattern = `$${key}$`
           parameter = parameter.replace(pattern, value)
         }
         return parameter
@@ -265,8 +265,8 @@ export default class YukiCommandSession {
     this.chatManager.respondCardMessageToUser({
       originalEvent: this.context.event.originalEvent,
       content: CardBuilder.fromTemplate()
-        .addIconWithKMarkdownText(CardIcons.MikuCute, "定义函数成功")
-        .addPlainText(`快试试 /${commandName} 吧`)
+        .addIconWithKMarkdownText(CardIcons.MikuCute, "已定义函数")
+        .addPlainText(`快试试 /yuki /${commandName} 吧`)
         .build()
     })
   }
