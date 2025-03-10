@@ -86,6 +86,9 @@ function mapContextUnit(unit: ContextUnit): ChatCompletionMessageParam {
         text: "url of image above: " + src
       })
     })
+    if ((result.content as Array<ChatCompletionContentPart>).length === 0) {
+      return normalUnit
+    }
     return result
   } catch {
     return normalUnit
