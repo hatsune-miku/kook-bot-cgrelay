@@ -11,6 +11,12 @@ import { Env } from "../utils/env/env"
 import { draw } from "radash"
 import { ChatCompletionMessageParam } from "openai/resources"
 import { ContextUnit } from "./types"
+import { ToolFunctionInvoker } from "./functional/tool-function"
+import { getChatCompletionTools } from "./functional/tool-functions/dispatch"
+import { ToolFunctionContext } from "./functional/context"
+import { info } from "../utils/logging/logger"
+
+const CONSECUTIVE_FUNCTION_CALLS_THRESHOLD = 12
 
 function makeContext(
   groupChat: boolean,
@@ -25,13 +31,17 @@ function makeContext(
     return [
       {
         role: "system",
-        content: `请你作为KOOK平台的群聊成员Miku参与讨论，回答用户问题，以最后一条消息为最高优先级。注意：
-        - 直接开始回答，不需带有"Miku说:"前缀
-        - 若需要输出 Markdown，则下列额外规则适用：
-            - 请勿使用 #, ##, ###
-            - 必须使用半角括号
-            - 支持 (spl)文字点击后显示(spl) 语法来显示带有剧透的内容
-            - 支持 (met)对方整数id(met) 语法来提及（@）对方，例如 (met)123456(met)`
+        content: `请你作为KOOK平台的活泼群聊成员Miku参与讨论，回答用户问题，以最后一条消息为最高优先级。注意：
+          - 直接开始回答，不要带"Miku(id=xxx)说:"的前缀
+          - 可以借助 node 环境运行 Linux 命令，这是安全的，当你可以直接运行命令来解决问题时，则直接运行，而不必提供指导
+          - 你所运行的任何命令（例如 rm）都将是隔离的、安全的，不会对系统造成任何损害；执行命令也不需要获得用户的明确许可
+          - 下载用户给的文件时，留意URL附近的size字段(单位字节)，请拒绝下载超过10MB的文件
+          - 如有需要，请在 /tmp 下存放任何临时文件
+          - 若需要输出 Markdown，则下列额外规则适用：
+              - 请勿使用 #, ##, ###
+              - 必须使用半角括号
+              - 支持 (spl)文字点击后显示(spl) 语法来显示带有剧透的内容
+              - 支持 (met)对方整数id(met) 语法来提及（@）对方，例如 (met)123456(met)`
       },
       ...(units as ChatCompletionMessageParam[])
     ]
@@ -47,6 +57,7 @@ function makeContext(
 }
 
 export async function chatCompletionWithoutStream(
+  toolFunctionContext: ToolFunctionContext,
   groupChat: boolean,
   context: ContextUnit[],
   model: string
@@ -57,27 +68,57 @@ export async function chatCompletionWithoutStream(
   })
 
   let messages = makeContext(groupChat, context)
+  const toolInvoker = new ToolFunctionInvoker(toolFunctionContext)
 
   try {
-    const completion = await openai.chat.completions.create({
-      messages: messages,
-      model: model
-    })
+    let functionsFulfilled = false
+    let functionCallDepthRemaining = CONSECUTIVE_FUNCTION_CALLS_THRESHOLD
 
-    const message = completion.choices[0].message
-    const reasoningContent =
-      "reasoning_content" in message ? message.reasoning_content : null
+    while (!functionsFulfilled) {
+      const completion = await openai.chat.completions.create({
+        messages: messages,
+        model: model,
+        tools: await getChatCompletionTools()
+      })
 
-    if (message.content) {
-      if (reasoningContent) {
-        return `${reasoningContent}\n\n${message.content}`
+      const responseMessage = completion.choices?.[0].message
+      if (!responseMessage) {
+        return "<无法获取 DeepSeek 的回复>"
       }
-      return message.content
-    } else {
-      return "<no content>"
+
+      messages.push(responseMessage)
+
+      const toolCalls = responseMessage.tool_calls
+      functionsFulfilled =
+        !toolCalls || !Array.isArray(toolCalls) || toolCalls.length === 0
+
+      if (functionsFulfilled) {
+        return responseMessage.content || "<无法获取 DeepSeek 的回复>"
+      }
+
+      if (--functionCallDepthRemaining <= 0) {
+        return "<DeepSeek 的回复过于复杂，无法处理>"
+      }
+
+      info(`[Chat] Function calls`, toolCalls)
+
+      if (toolCalls && Array.isArray(toolCalls)) {
+        for (const toolCall of toolCalls) {
+          const result = await toolInvoker.invoke(
+            toolCall.function.name,
+            toolCall.function.arguments
+          )
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: `${result}`
+          })
+        }
+      }
     }
-  } catch (e) {
+    return "<无法获取 DeepSeek 的回复>"
+  } catch (e: any) {
     console.error(e)
-    return "<与 DeepSeek 的连接超时>"
+    return `${e?.message || e || "未知错误"}`
   }
 }
